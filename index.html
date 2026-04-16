@@ -18,6 +18,15 @@
   --green:#3ecf8e;--red:#ef6c6c;--blue:#5a9cf5;--purple:#9b7fe8;--amber:#f5a424;
   --r:12px;--rs:8px;--t:0.17s cubic-bezier(.4,0,.2,1);
 }
+body.light{
+  --bg:#f4f5f8;--s1:#ffffff;--s2:#eef0f5;--s3:#e3e6ed;--s4:#d8dce6;
+  --border:rgba(0,0,0,0.07);--border2:rgba(0,0,0,0.12);
+  --text:#1a1f2e;--td:#4a5568;--tf:#9aa3b5;
+  --gdim:rgba(180,130,40,0.08);--gbord:rgba(180,130,40,0.22);
+}
+.theme-toggle{width:32px;height:18px;border-radius:9px;border:1px solid var(--border2);background:var(--s3);cursor:pointer;position:relative;transition:background var(--t);flex-shrink:0;display:flex;align-items:center;padding:0 2px}
+.theme-toggle::after{content:'';width:13px;height:13px;border-radius:50%;background:var(--td);transition:transform var(--t),background var(--t);transform:translateX(0)}
+body.light .theme-toggle::after{transform:translateX(14px);background:var(--gold)}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;font-size:15px;line-height:1.6;overflow:hidden}
 #app{display:flex;flex-direction:column;height:100dvh;max-width:500px;margin:0 auto}
@@ -164,6 +173,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
       <div class="logo-sub">Charter Revision · v<span id="app-ver">2.0.0</span></div>
     </div>
     <div class="hdr-r">
+      <div class="theme-toggle" id="theme-toggle" title="Toggle light/dark mode"></div>
       <div class="streak-b">🔥<span id="streak-n">0</span></div>
       <div class="sdot" id="sdot"></div>
     </div>
@@ -877,14 +887,18 @@ function startRealtimeSync(){
   onValue(ref(db, FBP+"state"), (snap)=>{
     if(!snap.exists()) return;
     const remote = snap.val();
-    // Only update if remote data is newer (has more activity)
-    const remoteTotal = (remote.totalQ||0) + (remote.cardsReviewed||0);
-    const localTotal  = (state.totalQ||0)  + (state.cardsReviewed||0);
-    if(remoteTotal > localTotal){
-      state = {...state, ...remote};
-      updateStreakUI(); updateProgressUI();
-      setSynced();
-    }
+    // Merge remote into local — remote always wins for cumulative counters
+    // (handles cross-device sync correctly)
+    const merged = {...state, ...remote};
+    // Take the MAX of cumulative counters so neither device loses progress
+    merged.totalQ = Math.max(state.totalQ||0, remote.totalQ||0);
+    merged.correctQ = Math.max(state.correctQ||0, remote.correctQ||0);
+    merged.cardsReviewed = Math.max(state.cardsReviewed||0, remote.cardsReviewed||0);
+    merged.quizzesDone = Math.max(state.quizzesDone||0, remote.quizzesDone||0);
+    merged.streak = Math.max(state.streak||0, remote.streak||0);
+    state = merged;
+    updateStreakUI(); updateProgressUI();
+    setSynced();
   }, (err)=>{ setSyncErr(); });
 }
 
@@ -918,21 +932,18 @@ function updateStreakUI(){
 // ─────────────────────────────────────────────
 // NAVIGATION
 // ─────────────────────────────────────────────
-function switchTab(viewName){
+function switchTab(v){
   document.querySelectorAll(".nb").forEach(b=>b.classList.remove("active"));
-  const activeBtn = document.querySelector(`.nb[data-view="${viewName}"]`);
-  if(activeBtn) activeBtn.classList.add("active");
-  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
-  const viewEl = document.getElementById("view-"+viewName);
-  if(viewEl) viewEl.classList.add("active");
+  document.querySelector(`.nb[data-view="${v}"]`).classList.add("active");
+  document.querySelectorAll(".view").forEach(el=>el.classList.remove("active"));
+  document.getElementById("view-"+v).classList.add("active");
   document.getElementById("main").scrollTop=0;
-  if(viewName==="progress") updateProgressUI();
-  if(viewName==="db") renderDB();
-  try{ localStorage.setItem("cfa_active_tab", viewName); } catch(e){}
+  sessionStorage.setItem("cfa_active_tab", v);
+  if(v==="progress") updateProgressUI();
+  if(v==="db") renderDB();
 }
-
 document.querySelectorAll(".nb").forEach(btn=>{
-  btn.addEventListener("click",()=>{ switchTab(btn.dataset.view); });
+  btn.addEventListener("click",()=>switchTab(btn.dataset.view));
 });
 
 // ─────────────────────────────────────────────
@@ -1077,7 +1088,6 @@ function renderFlCard(){
   document.querySelectorAll(".rb").forEach(btn=>{
     btn.addEventListener("click",()=>{
       state.cardsReviewed=(state.cardsReviewed||0)+1;
-      saveState();
       if(flIdx<flCards.length-1){ flIdx++; renderFlCard(); }
       else {
         document.getElementById("fl-card-out").innerHTML=`
@@ -1534,6 +1544,20 @@ document.getElementById("export-ids-btn").addEventListener("click",()=>{
 // ─────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// DARK MODE TOGGLE
+// ─────────────────────────────────────────────
+function applyTheme(light){
+  document.body.classList.toggle("light", light);
+  localStorage.setItem("cfa_theme", light ? "light" : "dark");
+}
+document.getElementById("theme-toggle").addEventListener("click",()=>{
+  applyTheme(!document.body.classList.contains("light"));
+});
+// Restore saved theme
+const savedTheme = localStorage.getItem("cfa_theme");
+if(savedTheme === "light") applyTheme(true);
+
 async function init(){
   await loadState();
   startRealtimeSync();
@@ -1541,13 +1565,9 @@ async function init(){
   buildQTopics();
   loadToday();
   markActiveToday();
-  // Restore last active tab after everything is ready
-  try{
-    const savedTab = localStorage.getItem("cfa_active_tab");
-    if(savedTab && document.getElementById("view-"+savedTab)){
-      switchTab(savedTab);
-    }
-  } catch(e){}
+  // Restore last active tab
+  const savedTab = sessionStorage.getItem("cfa_active_tab");
+  if(savedTab) switchTab(savedTab);
 }
 init();
 </script>

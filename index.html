@@ -918,17 +918,21 @@ function updateStreakUI(){
 // ─────────────────────────────────────────────
 // NAVIGATION
 // ─────────────────────────────────────────────
+function switchTab(viewName){
+  document.querySelectorAll(".nb").forEach(b=>b.classList.remove("active"));
+  const activeBtn = document.querySelector(`.nb[data-view="${viewName}"]`);
+  if(activeBtn) activeBtn.classList.add("active");
+  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+  const viewEl = document.getElementById("view-"+viewName);
+  if(viewEl) viewEl.classList.add("active");
+  document.getElementById("main").scrollTop=0;
+  if(viewName==="progress") updateProgressUI();
+  if(viewName==="db") renderDB();
+  try{ localStorage.setItem("cfa_active_tab", viewName); } catch(e){}
+}
+
 document.querySelectorAll(".nb").forEach(btn=>{
-  btn.addEventListener("click",()=>{
-    const v = btn.dataset.view;
-    document.querySelectorAll(".nb").forEach(b=>b.classList.remove("active"));
-    btn.classList.add("active");
-    document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
-    document.getElementById("view-"+v).classList.add("active");
-    document.getElementById("main").scrollTop=0;
-    if(v==="progress") updateProgressUI();
-    if(v==="db") renderDB();
-  });
+  btn.addEventListener("click",()=>{ switchTab(btn.dataset.view); });
 });
 
 // ─────────────────────────────────────────────
@@ -1073,6 +1077,7 @@ function renderFlCard(){
   document.querySelectorAll(".rb").forEach(btn=>{
     btn.addEventListener("click",()=>{
       state.cardsReviewed=(state.cardsReviewed||0)+1;
+      saveState();
       if(flIdx<flCards.length-1){ flIdx++; renderFlCard(); }
       else {
         document.getElementById("fl-card-out").innerHTML=`
@@ -1536,6 +1541,13 @@ async function init(){
   buildQTopics();
   loadToday();
   markActiveToday();
+  // Restore last active tab after everything is ready
+  try{
+    const savedTab = localStorage.getItem("cfa_active_tab");
+    if(savedTab && document.getElementById("view-"+savedTab)){
+      switchTab(savedTab);
+    }
+  } catch(e){}
 }
 init();
 </script>

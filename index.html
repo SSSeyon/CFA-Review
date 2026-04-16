@@ -44,7 +44,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
 .logo-sub{font-size:9.5px;color:var(--tf);letter-spacing:1.5px;text-transform:uppercase;margin-top:-1px}
 .hdr-r{display:flex;align-items:center;gap:9px}
 .streak-b{display:flex;align-items:center;gap:4px;background:var(--gdim);border:1px solid var(--gbord);border-radius:20px;padding:4px 9px;font-size:11.5px;font-weight:600;color:var(--gl)}
-.sdot{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 5px rgba(239,108,108,.6);transition:background var(--t),box-shadow var(--t)}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--tf);box-shadow:none;transition:background var(--t),box-shadow var(--t)}
 .sdot.synced{background:var(--green);box-shadow:0 0 5px rgba(62,207,142,.6)}
 .sdot.syncing{background:var(--amber);box-shadow:0 0 4px rgba(245,164,36,.6);animation:sp 1s infinite}
 .sdot.offline{background:var(--red);box-shadow:0 0 5px rgba(239,108,108,.6)}
@@ -256,7 +256,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
             <span class="tag gold" id="fl-ctr">Card 1</span>
             <span id="fl-due-badge" class="due-badge" style="display:none"></span>
           </div>
-          <button class="btn btn-g btn-sm" id="fl-back">← Subjects</button>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-g btn-sm" id="fl-back">← Subjects</button>
+            <button class="btn btn-g btn-sm" id="fl-exit">🏠</button>
+          </div>
         </div>
         <div id="fl-card-out"></div>
       </div>
@@ -453,7 +456,7 @@ import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/fir
 // ─────────────────────────────────────────────
 // APP VERSION & FIREBASE
 // ─────────────────────────────────────────────
-const APP_VERSION = "1.0.6";
+const APP_VERSION = "1.0.8";
 document.getElementById("app-ver").textContent = APP_VERSION;
 
 const fbApp = initializeApp({
@@ -1000,21 +1003,37 @@ let qQs=[], qIdx=0, qScore=0;
 let dbLevel="L1";
 
 // ─────────────────────────────────────────────
-// FIREBASE
+// FIREBASE — with preview/sandbox fallback
 // ─────────────────────────────────────────────
 const sdot = document.getElementById("sdot");
 function setSyncing(){ sdot.className="sdot syncing"; }
 function setSynced(){ sdot.className="sdot synced"; }
 function setSyncErr(){ sdot.className="sdot offline"; }
+function setPreview(){ sdot.className="sdot"; sdot.style.background="var(--tf)"; sdot.style.boxShadow="none"; sdot.title="Preview mode — sync disabled"; }
+
+// Detect sandboxed/preview environment
+// Canvas iframes block firebase.googleapis.com — we detect this with a quick probe
+let IS_PREVIEW = false;
+async function detectPreview(){
+  try {
+    const ctrl = new AbortController();
+    setTimeout(()=>ctrl.abort(), 1500);
+    await fetch("https://firestore.googleapis.com/", {method:"HEAD", mode:"no-cors", signal:ctrl.signal});
+  } catch(e){
+    IS_PREVIEW = true;
+  }
+}
 
 // Online/offline detection
-window.addEventListener("online", ()=>{ setSynced(); loadState(); });
-window.addEventListener("offline", ()=>{ setSyncErr(); toast("You're offline — changes won't sync"); });
-
-// Set initial dot state based on connectivity
-if(!navigator.onLine) setSyncErr(); else setSyncing();
+window.addEventListener("online", ()=>{ if(!IS_PREVIEW){ setSynced(); loadState(); } });
+window.addEventListener("offline", ()=>{ if(!IS_PREVIEW) setSyncErr(); });
 
 async function loadState(){
+  if(IS_PREVIEW){
+    setPreview();
+    updateStreakUI(); updateProgressUI();
+    return;
+  }
   if(!navigator.onLine){ setSyncErr(); return; }
   setSyncing();
   try {
@@ -1027,9 +1046,9 @@ async function loadState(){
   updateStreakUI(); updateProgressUI();
 }
 
-// Real-time listeners — picks up changes made on other devices automatically
 function startRealtimeSync(){
-  // State listener (progress, streaks, scores)
+  if(IS_PREVIEW) return; // no-op in preview
+  // State listener
   onValue(ref(db, FBP+"state"), (snap)=>{
     if(!snap.exists()) return;
     const remote = snap.val();
@@ -1043,8 +1062,7 @@ function startRealtimeSync(){
     updateStreakUI(); updateProgressUI();
     setSynced();
   }, (err)=>{ setSyncErr(); });
-
-  // Content listener — live import sync across all open devices
+  // Content listener
   onValue(ref(db, FBP+"importedContent"), (snap)=>{
     if(!snap.exists()) return;
     const beforeIds = getAllContentIds().size;
@@ -1059,6 +1077,7 @@ function startRealtimeSync(){
 }
 
 async function saveState(){
+  if(IS_PREVIEW) return; // state lives in memory only during preview
   if(!navigator.onLine){ toast("Offline — progress saved when you reconnect"); return; }
   setSyncing();
   try { await set(ref(db, FBP+"state"), state); setSynced(); }
@@ -1066,7 +1085,7 @@ async function saveState(){
 }
 
 async function saveImportedContent(newItems){
-  if(!navigator.onLine) return;
+  if(IS_PREVIEW || !navigator.onLine) return;
   try { await set(ref(db, FBP+"importedContent"), newItems); }
   catch(e){ console.warn("Could not persist imported content to Firebase"); }
 }
@@ -1205,6 +1224,8 @@ function buildFlTopics(){
 
 document.querySelectorAll("#fltabs .lt").forEach(tab=>{
   tab.addEventListener("click",()=>{
+    // Ignore tab clicks while a session is active
+    if(document.getElementById("fl-card-sec").style.display==="block") return;
     document.querySelectorAll("#fltabs .lt").forEach(t=>t.classList.remove("active"));
     tab.classList.add("active"); flLevel=tab.dataset.lv; buildFlTopics();
   });
@@ -1214,6 +1235,11 @@ document.getElementById("fl-start").addEventListener("click",startFlash);
 document.getElementById("fl-back").addEventListener("click",()=>{
   document.getElementById("fl-card-sec").style.display="none";
   document.getElementById("fl-topic-sec").style.display="block";
+});
+document.getElementById("fl-exit").addEventListener("click",()=>{
+  document.getElementById("fl-card-sec").style.display="none";
+  document.getElementById("fl-topic-sec").style.display="block";
+  switchTab("today");
 });
 
 function getDueCards(level, topic){
@@ -1280,10 +1306,35 @@ function renderFlCard(){
     toggleBookmark(card.id);
     renderFlCard();
   });
+  // Tap to flip
   document.getElementById("fcwrap").addEventListener("click",()=>{
     document.getElementById("fcinner").classList.toggle("flipped");
     document.getElementById("fcnav").style.display="flex";
   });
+  // Swipe left = next card (only if rated), swipe right = previous card
+  let swipeStartX=0, swipeStartY=0;
+  const fcwrapEl = document.getElementById("fcwrap");
+  fcwrapEl.addEventListener("touchstart",(e)=>{
+    swipeStartX=e.touches[0].clientX;
+    swipeStartY=e.touches[0].clientY;
+  },{passive:true});
+  fcwrapEl.addEventListener("touchend",(e)=>{
+    const dx=e.changedTouches[0].clientX-swipeStartX;
+    const dy=e.changedTouches[0].clientY-swipeStartY;
+    if(Math.abs(dx)<40||Math.abs(dx)<Math.abs(dy)*1.5) return; // not a horizontal swipe
+    if(dx<0){
+      // Swipe left — go forward (only if card has been flipped/rated)
+      const isFlipped=document.getElementById("fcinner")?.classList.contains("flipped");
+      if(!isFlipped){ toast("Flip the card first"); return; }
+      // Simulate clicking the middle "OK" rating button to advance
+      const okBtn=document.querySelector(".rb.rm");
+      if(okBtn) okBtn.click();
+    } else {
+      // Swipe right — go back to previous card
+      if(flIdx>0){ flIdx--; renderFlCard(); }
+      else toast("Already on the first card");
+    }
+  },{passive:true});
   document.querySelectorAll(".rb").forEach(btn=>{
     btn.addEventListener("click",()=>{
       const rating = btn.dataset.r; // easy / medium / hard
@@ -1355,6 +1406,8 @@ function buildQTopics(){
 
 document.querySelectorAll("#qltabs .lt").forEach(tab=>{
   tab.addEventListener("click",()=>{
+    // Ignore tab clicks while a session is active
+    if(document.getElementById("q-session-sec").style.display==="block") return;
     document.querySelectorAll("#qltabs .lt").forEach(t=>t.classList.remove("active"));
     tab.classList.add("active"); qLevel=tab.dataset.lv; buildQTopics();
   });
@@ -1380,7 +1433,10 @@ function renderQuestion(){
   document.getElementById("q-out").innerHTML=`
     <div class="qprog">${pips}</div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <span class="tag">${qIdx+1} / ${qQs.length}</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="tag">${qIdx+1} / ${qQs.length}</span>
+        <button class="btn btn-g btn-sm" id="q-exit">🏠</button>
+      </div>
       <div style="display:flex;align-items:center;gap:6px">
         <span class="tag gold">${qTopic}</span>
         <button class="bm-btn${qIsBm?" active":""}" id="bm-q" title="Bookmark">
@@ -1394,11 +1450,16 @@ function renderQuestion(){
     <button class="btn btn-p btn-w" id="qnext" style="display:none">${qIdx<qQs.length-1?"Next Question →":"See Results"}</button>
   `;
   document.getElementById("bm-q").addEventListener("click",()=>{ toggleBookmark(q.id); const b=document.getElementById("bm-q"); if(b){const active=(state.bookmarks||[]).includes(q.id); b.classList.toggle("active",active); b.querySelector("svg").setAttribute("fill",active?"currentColor":"none");} });
-  document.querySelectorAll(".qopt").forEach(opt=>{
+  document.getElementById("q-exit").addEventListener("click",()=>{
+    document.getElementById("q-session-sec").style.display="none";
+    document.getElementById("q-topic-sec").style.display="block";
+    switchTab("today");
+  });
+  document.querySelectorAll("#qopts .qopt").forEach(opt=>{
     opt.addEventListener("click",()=>{
       const chosen=parseInt(opt.dataset.idx);
       if(chosen===q.ans) qScore++;
-      document.querySelectorAll(".qopt").forEach((o,i)=>{
+      document.querySelectorAll("#qopts .qopt").forEach((o,i)=>{
         o.disabled=true;
         if(i===q.ans) o.classList.add("correct");
         else if(i===chosen&&chosen!==q.ans) o.classList.add("wrong");
@@ -1933,15 +1994,16 @@ document.getElementById("reset-progress-btn").addEventListener("click",()=>{
 });
 
 async function init(){
+  await detectPreview(); // must run first — sets IS_PREVIEW flag
   await loadState();
   startRealtimeSync();
   buildFlTopics();
   buildQTopics();
   loadToday();
   markActiveToday();
-  // Restore last active tab
   const savedTab = sessionStorage.getItem("cfa_active_tab");
   if(savedTab) switchTab(savedTab);
+  if(IS_PREVIEW) toast("👁 Preview mode — data not synced to Firebase", 4000);
 }
 init();
 

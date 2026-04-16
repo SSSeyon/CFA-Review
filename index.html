@@ -386,7 +386,7 @@ import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/fir
 // ─────────────────────────────────────────────
 // APP VERSION & FIREBASE
 // ─────────────────────────────────────────────
-const APP_VERSION = "1.0.3";
+const APP_VERSION = "1.0.4";
 document.getElementById("app-ver").textContent = APP_VERSION;
 
 const fbApp = initializeApp({
@@ -960,15 +960,13 @@ async function loadState(){
   updateStreakUI(); updateProgressUI();
 }
 
-// Real-time listener — picks up changes made on other devices automatically
+// Real-time listeners — picks up changes made on other devices automatically
 function startRealtimeSync(){
+  // State listener (progress, streaks, scores)
   onValue(ref(db, FBP+"state"), (snap)=>{
     if(!snap.exists()) return;
     const remote = snap.val();
-    // Merge remote into local — remote always wins for cumulative counters
-    // (handles cross-device sync correctly)
     const merged = {...state, ...remote};
-    // Take the MAX of cumulative counters so neither device loses progress
     merged.totalQ = Math.max(state.totalQ||0, remote.totalQ||0);
     merged.correctQ = Math.max(state.correctQ||0, remote.correctQ||0);
     merged.cardsReviewed = Math.max(state.cardsReviewed||0, remote.cardsReviewed||0);
@@ -978,6 +976,19 @@ function startRealtimeSync(){
     updateStreakUI(); updateProgressUI();
     setSynced();
   }, (err)=>{ setSyncErr(); });
+
+  // Content listener — live import sync across all open devices
+  onValue(ref(db, FBP+"importedContent"), (snap)=>{
+    if(!snap.exists()) return;
+    const beforeIds = getAllContentIds().size;
+    mergeContent(snap.val(), false);
+    const afterIds = getAllContentIds().size;
+    const newItems = afterIds - beforeIds;
+    if(newItems > 0){
+      buildFlTopics(); buildQTopics(); renderDB();
+      toast(`✓ ${newItems} new item${newItems>1?"s":""} synced from another device`);
+    }
+  });
 }
 
 async function saveState(){

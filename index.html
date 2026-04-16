@@ -28,9 +28,14 @@ body.light{
   --text:#1a1f2e;--td:#4a5568;--tf:#9aa3b5;
   --gdim:rgba(180,130,40,0.08);--gbord:rgba(180,130,40,0.22);
 }
-.theme-toggle{width:32px;height:18px;border-radius:9px;border:1px solid var(--border2);background:var(--s3);cursor:pointer;position:relative;transition:background var(--t);flex-shrink:0;display:flex;align-items:center;padding:0 2px}
-.theme-toggle::after{content:'';width:13px;height:13px;border-radius:50%;background:var(--td);transition:transform var(--t),background var(--t);transform:translateX(0)}
-body.light .theme-toggle::after{transform:translateX(14px);background:var(--gold)}
+.theme-toggle{width:28px;height:28px;border-radius:50%;border:1px solid var(--border2);background:var(--s2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--t);flex-shrink:0;color:var(--td)}
+.theme-toggle:hover{background:var(--s3);border-color:var(--gbord);color:var(--gl)}
+.theme-toggle svg{width:15px;height:15px;transition:opacity var(--t)}
+.theme-toggle .icon-moon{display:block}
+.theme-toggle .icon-sun{display:none}
+body.light .theme-toggle .icon-moon{display:none}
+body.light .theme-toggle .icon-sun{display:block}
+body.light .theme-toggle{color:var(--gold);border-color:var(--gbord)}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;font-size:15px;line-height:1.6;overflow:hidden}
 #app{display:flex;flex-direction:column;height:100dvh;max-width:500px;margin:0 auto}
@@ -165,6 +170,14 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
 .vlog-info{}
 .vlog-desc{font-size:12px;color:var(--td);line-height:1.5}
 .vlog-date{font-size:10px;color:var(--tf);margin-top:2px}
+.setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.setting-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:1px}
+.setting-sub{font-size:11px;color:var(--tf);line-height:1.4}
+.setting-divider{height:1px;background:var(--border);margin:11px 0}
+.setting-stepper{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.step-btn{width:26px;height:26px;border-radius:50%;border:1px solid var(--border2);background:var(--s2);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--t);line-height:1}
+.step-btn:hover{background:var(--s3);border-color:var(--gbord)}
+.step-val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--gl);min-width:20px;text-align:center}
 #toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--s2);border:1px solid var(--border2);border-radius:var(--rs);padding:7px 14px;font-size:12px;color:var(--text);opacity:0;transition:all .2s ease;pointer-events:none;z-index:200;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.5)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
@@ -177,7 +190,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
       <div class="logo-sub">Charter Revision · v<span id="app-ver">2.0.0</span></div>
     </div>
     <div class="hdr-r">
-      <div class="theme-toggle" id="theme-toggle" title="Toggle light/dark mode"></div>
+      <button class="theme-toggle" id="theme-toggle-header" title="Toggle theme" aria-label="Toggle dark/light mode">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
       <div class="streak-b">🔥<span id="streak-n">0</span></div>
       <div class="sdot" id="sdot"></div>
     </div>
@@ -241,8 +257,50 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
       <div class="card" id="act-log"><div class="cb" style="color:var(--tf)">No activity yet.</div></div>
     </div>
 
-    <!-- DATABASE -->
-    <div class="view" id="view-db">
+    <!-- SETTINGS -->
+    <div class="view" id="view-settings">
+
+      <div class="lbl">Appearance</div>
+      <div class="card">
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">Dark Mode</div>
+            <div class="setting-sub">Switch between dark and light theme</div>
+          </div>
+          <button class="theme-toggle" id="theme-toggle-settings" aria-label="Toggle dark/light mode">
+            <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="lbl">Quiz</div>
+      <div class="card">
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">Questions per Quiz</div>
+            <div class="setting-sub">How many questions per session</div>
+          </div>
+          <div class="setting-stepper">
+            <button class="step-btn" id="q-count-down">−</button>
+            <span class="step-val" id="q-count-val">5</span>
+            <button class="step-btn" id="q-count-up">+</button>
+          </div>
+        </div>
+        <div class="setting-divider"></div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">Daily Streak Goal</div>
+            <div class="setting-sub">Minimum sessions per day to maintain streak</div>
+          </div>
+          <div class="setting-stepper">
+            <button class="step-btn" id="streak-goal-down">−</button>
+            <span class="step-val" id="streak-goal-val">1</span>
+            <button class="step-btn" id="streak-goal-up">+</button>
+          </div>
+        </div>
+      </div>
+
       <div class="lbl">Content Database</div>
       <div class="card">
         <div class="ltabs db-tabs">
@@ -252,7 +310,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
         </div>
         <div id="db-table-out"></div>
         <div class="db-footer">
-          <span>Total items across all levels: <span class="db-num" id="db-total">0</span></span>
+          <span>Total items: <span class="db-num" id="db-total">0</span></span>
           <span id="db-updated">—</span>
         </div>
       </div>
@@ -274,8 +332,24 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
         <button class="btn btn-g btn-w" id="export-ids-btn">📋 Copy All Content IDs</button>
       </div>
 
+      <div class="lbl">Data</div>
+      <div class="card">
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">Reset Progress</div>
+            <div class="setting-sub">Clears all quiz scores, streaks and card history</div>
+          </div>
+          <button class="btn btn-sm" id="reset-progress-btn" style="background:rgba(239,108,108,.12);color:var(--red);border:1px solid rgba(239,108,108,.25);flex-shrink:0">Reset</button>
+        </div>
+      </div>
+
       <div class="lbl">Version History</div>
       <div class="card" id="version-log"><div class="cb" style="color:var(--tf)">No imports yet.</div></div>
+
+      <div style="text-align:center;padding:12px 0 4px">
+        <div style="font-size:10px;color:var(--tf);letter-spacing:.5px">CFA Review · v<span id="app-ver-settings">1.0.2</span></div>
+        <div style="font-size:9.5px;color:var(--tf);margin-top:2px">Content is original and not affiliated with CFA Institute</div>
+      </div>
     </div>
 
   </div>
@@ -297,9 +371,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       <span>Progress</span>
     </button>
-    <button class="nb" data-view="db">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-      <span>Database</span>
+    <button class="nb" data-view="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Settings</span>
     </button>
   </div>
 </div>
@@ -312,7 +386,7 @@ import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/fir
 // ─────────────────────────────────────────────
 // APP VERSION & FIREBASE
 // ─────────────────────────────────────────────
-const APP_VERSION = "1.0.1";
+const APP_VERSION = "1.0.3";
 document.getElementById("app-ver").textContent = APP_VERSION;
 
 const fbApp = initializeApp({
@@ -1152,7 +1226,7 @@ function startQuiz(){
   const pool=[...(CONTENT.quizQuestions[qLevel][qTopic]||[])];
   if(!pool.length){ toast("No questions for this subject yet"); return; }
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
-  qQs=pool.slice(0,5); qIdx=0; qScore=0;
+  qQs=pool.slice(0,quizCount); qIdx=0; qScore=0;
   document.getElementById("q-topic-sec").style.display="none";
   document.getElementById("q-session-sec").style.display="block";
   renderQuestion();
@@ -1555,12 +1629,55 @@ function applyTheme(light){
   document.body.classList.toggle("light", light);
   localStorage.setItem("cfa_theme", light ? "light" : "dark");
 }
-document.getElementById("theme-toggle").addEventListener("click",()=>{
+document.getElementById("theme-toggle-header").addEventListener("click",()=>{
+  applyTheme(!document.body.classList.contains("light"));
+});
+document.getElementById("theme-toggle-settings").addEventListener("click",()=>{
   applyTheme(!document.body.classList.contains("light"));
 });
 // Restore saved theme
 const savedTheme = localStorage.getItem("cfa_theme");
 if(savedTheme === "light") applyTheme(true);
+
+// ─────────────────────────────────────────────
+// SETTINGS — QUIZ COUNT & STREAK GOAL
+// ─────────────────────────────────────────────
+let quizCount = parseInt(localStorage.getItem("cfa_quiz_count")||"5");
+let streakGoal = parseInt(localStorage.getItem("cfa_streak_goal")||"1");
+
+function updateSettingsUI(){
+  document.getElementById("q-count-val").textContent = quizCount;
+  document.getElementById("streak-goal-val").textContent = streakGoal;
+  const appVerS = document.getElementById("app-ver-settings");
+  if(appVerS) appVerS.textContent = APP_VERSION;
+}
+
+document.getElementById("q-count-down").addEventListener("click",()=>{
+  if(quizCount<=3) return;
+  quizCount--; localStorage.setItem("cfa_quiz_count", quizCount); updateSettingsUI();
+});
+document.getElementById("q-count-up").addEventListener("click",()=>{
+  if(quizCount>=20) return;
+  quizCount++; localStorage.setItem("cfa_quiz_count", quizCount); updateSettingsUI();
+});
+document.getElementById("streak-goal-down").addEventListener("click",()=>{
+  if(streakGoal<=1) return;
+  streakGoal--; localStorage.setItem("cfa_streak_goal", streakGoal); updateSettingsUI();
+});
+document.getElementById("streak-goal-up").addEventListener("click",()=>{
+  if(streakGoal>=5) return;
+  streakGoal++; localStorage.setItem("cfa_streak_goal", streakGoal); updateSettingsUI();
+});
+
+// Reset progress
+document.getElementById("reset-progress-btn").addEventListener("click",()=>{
+  if(!confirm("Reset all progress? This cannot be undone.")) return;
+  state.quizzesDone=0; state.totalQ=0; state.correctQ=0;
+  state.cardsReviewed=0; state.topicsProgress={}; state.activityLog=[];
+  state.streak=0; state.lastActiveDate=null;
+  saveState(); updateStreakUI(); updateProgressUI();
+  toast("Progress reset");
+});
 
 async function init(){
   await loadState();

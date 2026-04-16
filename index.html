@@ -26,9 +26,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
 .logo-sub{font-size:9.5px;color:var(--tf);letter-spacing:1.5px;text-transform:uppercase;margin-top:-1px}
 .hdr-r{display:flex;align-items:center;gap:9px}
 .streak-b{display:flex;align-items:center;gap:4px;background:var(--gdim);border:1px solid var(--gbord);border-radius:20px;padding:4px 9px;font-size:11.5px;font-weight:600;color:var(--gl)}
-.sdot{width:7px;height:7px;border-radius:50%;background:var(--tf);transition:background var(--t)}
-.sdot.on{background:var(--green);box-shadow:0 0 5px var(--green)}
-.sdot.ing{background:var(--amber);animation:sp 1s infinite}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 5px rgba(239,108,108,.6);transition:background var(--t),box-shadow var(--t)}
+.sdot.synced{background:var(--green);box-shadow:0 0 5px rgba(62,207,142,.6)}
+.sdot.syncing{background:var(--amber);box-shadow:0 0 4px rgba(245,164,36,.6);animation:sp 1s infinite}
+.sdot.offline{background:var(--red);box-shadow:0 0 5px rgba(239,108,108,.6)}
 @keyframes sp{0%,100%{opacity:1}50%{opacity:.3}}
 .main{flex:1;overflow-y:auto;overflow-x:hidden;padding:17px 17px 92px;scroll-behavior:smooth}
 .main::-webkit-scrollbar{width:0}
@@ -292,12 +293,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 // ─────────────────────────────────────────────
 // APP VERSION & FIREBASE
 // ─────────────────────────────────────────────
-const APP_VERSION = "2.0.0";
+const APP_VERSION = "1.0.0";
 document.getElementById("app-ver").textContent = APP_VERSION;
 
 const fbApp = initializeApp({
@@ -847,33 +848,55 @@ let dbLevel="L1";
 // FIREBASE
 // ─────────────────────────────────────────────
 const sdot = document.getElementById("sdot");
-function setSyncing(){ sdot.className="sdot ing"; }
-function setSynced(){ sdot.className="sdot on"; setTimeout(()=>sdot.className="sdot",3000); }
-function setSyncErr(){ sdot.className="sdot"; }
+function setSyncing(){ sdot.className="sdot syncing"; }
+function setSynced(){ sdot.className="sdot synced"; }
+function setSyncErr(){ sdot.className="sdot offline"; }
+
+// Online/offline detection
+window.addEventListener("online", ()=>{ setSynced(); loadState(); });
+window.addEventListener("offline", ()=>{ setSyncErr(); toast("You're offline — changes won't sync"); });
+
+// Set initial dot state based on connectivity
+if(!navigator.onLine) setSyncErr(); else setSyncing();
 
 async function loadState(){
+  if(!navigator.onLine){ setSyncErr(); return; }
   setSyncing();
   try {
     const snap = await get(ref(db, FBP+"state"));
     if(snap.exists()) state = {...state, ...snap.val()};
-    // Also load imported content stored in Firebase
     const csnap = await get(ref(db, FBP+"importedContent"));
-    if(csnap.exists()){
-      const imported = csnap.val();
-      mergeContent(imported, false); // merge silently on load
-    }
+    if(csnap.exists()) mergeContent(csnap.val(), false);
     setSynced();
-  } catch(e){ setSyncErr(); }
+  } catch(e){ setSyncErr(); toast("Could not reach Firebase — check your connection"); }
   updateStreakUI(); updateProgressUI();
 }
 
+// Real-time listener — picks up changes made on other devices automatically
+function startRealtimeSync(){
+  onValue(ref(db, FBP+"state"), (snap)=>{
+    if(!snap.exists()) return;
+    const remote = snap.val();
+    // Only update if remote data is newer (has more activity)
+    const remoteTotal = (remote.totalQ||0) + (remote.cardsReviewed||0);
+    const localTotal  = (state.totalQ||0)  + (state.cardsReviewed||0);
+    if(remoteTotal > localTotal){
+      state = {...state, ...remote};
+      updateStreakUI(); updateProgressUI();
+      setSynced();
+    }
+  }, (err)=>{ setSyncErr(); });
+}
+
 async function saveState(){
+  if(!navigator.onLine){ toast("Offline — progress saved when you reconnect"); return; }
   setSyncing();
   try { await set(ref(db, FBP+"state"), state); setSynced(); }
-  catch(e){ setSyncErr(); toast("Sync failed — changes saved locally"); }
+  catch(e){ setSyncErr(); toast("Sync failed — will retry on next action"); }
 }
 
 async function saveImportedContent(newItems){
+  if(!navigator.onLine) return;
   try { await set(ref(db, FBP+"importedContent"), newItems); }
   catch(e){ console.warn("Could not persist imported content to Firebase"); }
 }
@@ -1298,7 +1321,7 @@ function renderVersionLog(){
   }
   document.getElementById("version-log").innerHTML=`
     <div class="vlog-item">
-      <div class="vbadge">v2.0.0</div>
+      <div class="vbadge">v1.0.0</div>
       <div class="vlog-info">
         <div class="vlog-desc">Base content — ${BASE_CONTENT.dailyConcepts.length} concepts, quiz Qs and flashcards across L1/L2/L3</div>
         <div class="vlog-date">Installed</div>
@@ -1406,7 +1429,8 @@ function confirmImport(data, counts){
 
   // Log the import
   if(!state.versionLog) state.versionLog=[];
-  const nextVersion = `2.${state.versionLog.length+1}.0`;
+  const patchNum = state.versionLog.length + 1;
+  const nextVersion = `1.0.${patchNum}`;
   state.versionLog.push({
     version:nextVersion,
     description:`${data.description||"Content pack"} — +${counts.newQ} quiz Qs, +${counts.newF} flashcards, +${counts.newC} concepts`,
@@ -1507,6 +1531,7 @@ document.getElementById("export-ids-btn").addEventListener("click",()=>{
 // ─────────────────────────────────────────────
 async function init(){
   await loadState();
+  startRealtimeSync();
   buildFlTopics();
   buildQTopics();
   loadToday();

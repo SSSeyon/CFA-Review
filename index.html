@@ -170,6 +170,36 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
 .vlog-info{}
 .vlog-desc{font-size:12px;color:var(--td);line-height:1.5}
 .vlog-date{font-size:10px;color:var(--tf);margin-top:2px}
+/* Search */
+.search-wrap{position:relative;margin-bottom:12px}
+.search-inp{width:100%;background:var(--s1);border:1px solid var(--border2);border-radius:var(--rs);padding:9px 12px 9px 34px;font-size:13px;font-family:'Outfit',sans-serif;color:var(--text);outline:none;transition:border var(--t)}
+.search-inp:focus{border-color:var(--gbord)}
+.search-inp::placeholder{color:var(--tf)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--tf);pointer-events:none}
+.search-results{display:flex;flex-direction:column;gap:7px}
+.sr-item{background:var(--s1);border:1px solid var(--border);border-radius:var(--rs);padding:11px 12px;cursor:pointer;transition:all var(--t)}
+.sr-item:hover{border-color:var(--gbord);background:var(--s2)}
+.sr-item-q{font-size:12.5px;color:var(--text);margin-bottom:4px;line-height:1.5}
+.sr-item-meta{display:flex;gap:5px;flex-wrap:wrap}
+/* Heatmap */
+.heatmap{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:4px}
+.hm-cell{border-radius:var(--rs);padding:8px 9px;border:1px solid var(--border);position:relative;overflow:hidden}
+.hm-label{font-size:10px;font-weight:500;color:var(--text);line-height:1.3;margin-bottom:2px}
+.hm-pct{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600}
+.hm-0{background:var(--s1)}
+.hm-low{background:rgba(239,108,108,.12);border-color:rgba(239,108,108,.2)}
+.hm-low .hm-pct{color:var(--red)}
+.hm-mid{background:rgba(245,164,36,.12);border-color:rgba(245,164,36,.2)}
+.hm-mid .hm-pct{color:var(--amber)}
+.hm-good{background:rgba(62,207,142,.12);border-color:rgba(62,207,142,.2)}
+.hm-good .hm-pct{color:var(--green)}
+/* Bookmark */
+.bm-btn{background:none;border:none;cursor:pointer;padding:4px;color:var(--tf);transition:color var(--t);flex-shrink:0;display:flex;align-items:center}
+.bm-btn:hover{color:var(--gl)}
+.bm-btn.active{color:var(--gold)}
+.bm-btn svg{width:15px;height:15px}
+/* SRS due badge */
+.due-badge{background:rgba(62,207,142,.15);border:1px solid rgba(62,207,142,.3);color:var(--green);font-size:9.5px;font-weight:600;padding:2px 6px;border-radius:20px;margin-left:5px}
 .setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .setting-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:1px}
 .setting-sub{font-size:11px;color:var(--tf);line-height:1.4}
@@ -219,7 +249,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
       </div>
       <div id="fl-card-sec" style="display:none">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
-          <span class="tag gold" id="fl-ctr">Card 1</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="tag gold" id="fl-ctr">Card 1</span>
+            <span id="fl-due-badge" class="due-badge" style="display:none"></span>
+          </div>
           <button class="btn btn-g btn-sm" id="fl-back">← Subjects</button>
         </div>
         <div id="fl-card-out"></div>
@@ -237,7 +270,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
         <div class="lbl">Choose a subject</div>
         <div class="tgrid" id="q-topics"></div>
         <div style="height:9px"></div>
-        <button class="btn btn-p btn-w" id="q-start" disabled>Start Quiz (5 Questions)</button>
+        <button class="btn btn-p btn-w" id="q-start" disabled>Start Quiz</button>
       </div>
       <div id="q-session-sec" style="display:none"><div id="q-out"></div></div>
     </div>
@@ -251,10 +284,37 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
         <div class="scard"><div class="sv" id="st-cards">0</div><div class="sl">Cards Reviewed</div></div>
         <div class="scard"><div class="sv" id="st-streak">0</div><div class="sl">Day Streak</div></div>
       </div>
-      <div class="lbl">Subjects Practised</div>
-      <div class="card" id="tp-card"><div class="cb" style="color:var(--tf)">Complete quizzes to track subject progress.</div></div>
+      <div class="lbl">Performance Heatmap</div>
+      <div class="card" id="tp-card">
+        <div class="ltabs" id="hm-ltabs" style="margin-bottom:10px">
+          <div class="lt active" data-hlv="L1" style="flex:1;text-align:center;cursor:pointer">L1</div>
+          <div class="lt" data-hlv="L2" style="flex:1;text-align:center;cursor:pointer">L2</div>
+          <div class="lt" data-hlv="L3" style="flex:1;text-align:center;cursor:pointer">L3</div>
+        </div>
+        <div id="heatmap-out"><div class="cb" style="color:var(--tf)">Complete quizzes to populate.</div></div>
+        <div style="display:flex;gap:8px;margin-top:9px;font-size:10px;color:var(--tf)">
+          <span>⬜ No data</span><span style="color:var(--red)">🟥 &lt;50%</span><span style="color:var(--amber)">🟨 50–69%</span><span style="color:var(--green)">🟩 70%+</span>
+        </div>
+      </div>
       <div class="lbl">Recent Activity</div>
       <div class="card" id="act-log"><div class="cb" style="color:var(--tf)">No activity yet.</div></div>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="view" id="view-search">
+      <div class="search-wrap">
+        <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-inp" id="search-inp" type="text" placeholder="Search questions and flashcards…" autocomplete="off"/>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <div class="lt active" id="sf-all" style="flex:1;text-align:center;cursor:pointer">All</div>
+        <div class="lt" id="sf-quiz" style="flex:1;text-align:center;cursor:pointer">Quiz</div>
+        <div class="lt" id="sf-flash" style="flex:1;text-align:center;cursor:pointer">Flashcards</div>
+        <div class="lt" id="sf-bm" style="flex:1;text-align:center;cursor:pointer">★ Saved</div>
+      </div>
+      <div class="search-results" id="search-results">
+        <div class="cb" style="color:var(--tf);text-align:center;padding:20px 0">Type to search across all content</div>
+      </div>
     </div>
 
     <!-- SETTINGS -->
@@ -371,6 +431,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       <span>Progress</span>
     </button>
+    <button class="nb" data-view="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span>Search</span>
+    </button>
     <button class="nb" data-view="settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       <span>Settings</span>
@@ -386,7 +450,7 @@ import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/fir
 // ─────────────────────────────────────────────
 // APP VERSION & FIREBASE
 // ─────────────────────────────────────────────
-const APP_VERSION = "1.0.4";
+const APP_VERSION = "1.0.5";
 document.getElementById("app-ver").textContent = APP_VERSION;
 
 const fbApp = initializeApp({
@@ -916,11 +980,11 @@ const BASE_CONTENT = {
 // STATE
 // ─────────────────────────────────────────────
 let state = {
-  streak:0, lastActiveDate:null,
+  streak:0, lastActiveDate:null, lastStudyDate:null,
   quizzesDone:0, totalQ:0, correctQ:0,
   cardsReviewed:0, topicsProgress:{},
   activityLog:[], conceptIdx:0, conceptDate:null,
-  versionLog:[]
+  versionLog:[], srsData:{}, bookmarks:[]
 };
 
 // Runtime content store — base + imports merged
@@ -1005,10 +1069,16 @@ async function saveImportedContent(newItems){
 }
 
 function markActiveToday(){
+  // Just records the app was opened — does NOT increment streak
+  // Streak incremented only when a quiz or flashcard deck is completed
+}
+
+function markStudyToday(){
   const today = new Date().toISOString().split("T")[0];
-  if(state.lastActiveDate===today) return;
+  if(state.lastStudyDate===today) return; // already counted today
   const yesterday = new Date(Date.now()-86400000).toISOString().split("T")[0];
-  state.streak = state.lastActiveDate===yesterday ? (state.streak||0)+1 : 1;
+  state.streak = state.lastStudyDate===yesterday ? (state.streak||0)+1 : 1;
+  state.lastStudyDate = today;
   state.lastActiveDate = today;
   saveState(); updateStreakUI();
 }
@@ -1114,8 +1184,11 @@ function buildFlTopics(){
   document.getElementById("fl-start").disabled=true;
   SUBJECTS[flLevel].forEach(t=>{
     const chip=document.createElement("div");
-    chip.className="tchip"; chip.textContent=t;
-    const hasCards = (CONTENT.flashcards[flLevel][t]||[]).length > 0;
+    const due = getDueCards(flLevel,t).length;
+    const total = (CONTENT.flashcards[flLevel][t]||[]).length;
+    chip.className="tchip";
+    chip.innerHTML = t + (due>0?` <span class="due-badge">${due} due</span>`:"");
+    const hasCards = total > 0;
     if(!hasCards) chip.style.opacity="0.4";
     chip.addEventListener("click",()=>{
       if(!hasCards){ toast("No flashcards yet — import a content pack"); return; }
@@ -1140,10 +1213,25 @@ document.getElementById("fl-back").addEventListener("click",()=>{
   document.getElementById("fl-topic-sec").style.display="block";
 });
 
+function getDueCards(level, topic){
+  const today = Math.floor(Date.now()/86400000);
+  return (CONTENT.flashcards[level]?.[topic]||[]).filter(c=>{
+    const srs = (state.srsData||{})[c.id];
+    return !srs || srs.due <= today;
+  });
+}
+
 function startFlash(){
   if(!flTopic) return;
-  flCards = [...(CONTENT.flashcards[flLevel][flTopic]||[])];
-  for(let i=flCards.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[flCards[i],flCards[j]]=[flCards[j],flCards[i]];}
+  const today = Math.floor(Date.now()/86400000);
+  const all = [...(CONTENT.flashcards[flLevel][flTopic]||[])];
+  // Sort: due cards first, then by due date ascending
+  all.sort((a,b)=>{
+    const sa=(state.srsData||{})[a.id]||{due:0};
+    const sb=(state.srsData||{})[b.id]||{due:0};
+    return (sa.due<=today?0:1) - (sb.due<=today?0:1) || sa.due - sb.due;
+  });
+  flCards = all;
   flIdx=0;
   document.getElementById("fl-topic-sec").style.display="none";
   document.getElementById("fl-card-sec").style.display="block";
@@ -1156,11 +1244,25 @@ function renderFlCard(){
     return;
   }
   const card=flCards[flIdx];
+  const today=Math.floor(Date.now()/86400000);
+  const srs=(state.srsData||{})[card.id];
+  const isDue=!srs||srs.due<=today;
+  const dueBadge=document.getElementById("fl-due-badge");
+  if(dueBadge){ if(isDue){dueBadge.style.display="inline";dueBadge.textContent="Due";}else{dueBadge.style.display="none";} }
   document.getElementById("fl-ctr").textContent=`Card ${flIdx+1} of ${flCards.length}`;
+  const isBm = (state.bookmarks||[]).includes(card.id);
   document.getElementById("fl-card-out").innerHTML=`
     <div class="fcwrap" id="fcwrap">
       <div class="fc" id="fcinner">
-        <div class="fcf fc-front"><div class="fc-hint">Tap to reveal</div><div class="fc-q">${card.front}</div></div>
+        <div class="fcf fc-front">
+          <div style="display:flex;justify-content:space-between;width:100%;margin-bottom:8px">
+            <div class="fc-hint">Tap to reveal</div>
+            <button class="bm-btn${isBm?" active":""}" id="bm-fl" title="Bookmark">
+              <svg viewBox="0 0 24 24" fill="${isBm?"currentColor":"none"}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            </button>
+          </div>
+          <div class="fc-q">${card.front}</div>
+        </div>
         <div class="fcf fc-back"><div class="fc-hint">Answer</div><div class="fc-a">${card.back}</div></div>
       </div>
     </div>
@@ -1170,26 +1272,51 @@ function renderFlCard(){
       <button class="rb rh" data-r="hard">✗ Hard</button>
     </div>
   `;
+  document.getElementById("bm-fl").addEventListener("click",(e)=>{
+    e.stopPropagation();
+    toggleBookmark(card.id);
+    renderFlCard();
+  });
   document.getElementById("fcwrap").addEventListener("click",()=>{
     document.getElementById("fcinner").classList.toggle("flipped");
     document.getElementById("fcnav").style.display="flex";
   });
   document.querySelectorAll(".rb").forEach(btn=>{
     btn.addEventListener("click",()=>{
+      const rating = btn.dataset.r; // easy / medium / hard
+      const card = flCards[flIdx];
+      // SRS: update interval for this card
+      if(!state.srsData) state.srsData={};
+      const srs = state.srsData[card.id] || {interval:1, ease:2.5, due:0};
+      const today = Math.floor(Date.now()/86400000);
+      if(rating==="easy"){
+        srs.interval = Math.round(srs.interval * srs.ease);
+        srs.ease = Math.min(srs.ease + 0.15, 3.0);
+      } else if(rating==="medium"){
+        srs.interval = Math.max(Math.round(srs.interval * 1.2), srs.interval+1);
+      } else {
+        srs.interval = 1;
+        srs.ease = Math.max(srs.ease - 0.2, 1.3);
+      }
+      srs.due = today + srs.interval;
+      state.srsData[card.id] = srs;
       state.cardsReviewed=(state.cardsReviewed||0)+1;
       if(flIdx<flCards.length-1){ flIdx++; renderFlCard(); }
       else {
+        const dueCount = getDueCards(flLevel, flTopic).length;
         document.getElementById("fl-card-out").innerHTML=`
           <div class="card" style="text-align:center;padding:26px 16px">
             <div style="font-size:28px;margin-bottom:9px">🎯</div>
             <div class="ct" style="margin-bottom:5px">Deck Complete!</div>
             <div class="cb">You reviewed ${flCards.length} cards on ${flTopic}.</div>
+            ${dueCount>0?`<div class="cb" style="margin-top:6px;color:var(--amber)">⚡ ${dueCount} card${dueCount>1?"s":""} due for review</div>`:""}
             <div style="margin-top:13px;display:flex;gap:6px">
               <button class="btn btn-g" style="flex:1" id="fl-again">Again</button>
               <button class="btn btn-p" style="flex:1" id="fl-newtopic">New Subject</button>
             </div>
           </div>`;
         logActivity("flash",flTopic,flLevel);
+        markStudyToday();
         saveState();
         document.getElementById("fl-again").addEventListener("click",startFlash);
         document.getElementById("fl-newtopic").addEventListener("click",()=>{
@@ -1246,17 +1373,24 @@ function startQuiz(){
 function renderQuestion(){
   const q=qQs[qIdx];
   const pips=qQs.map((_,i)=>`<div class="qpip${i<qIdx?" done":i===qIdx?" cur":""}"></div>`).join("");
+  const qIsBm = (state.bookmarks||[]).includes(q.id);
   document.getElementById("q-out").innerHTML=`
     <div class="qprog">${pips}</div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <span class="tag">${qIdx+1} / ${qQs.length}</span>
-      <span class="tag gold">${qTopic}</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="tag gold">${qTopic}</span>
+        <button class="bm-btn${qIsBm?" active":""}" id="bm-q" title="Bookmark">
+          <svg viewBox="0 0 24 24" fill="${qIsBm?"currentColor":"none"}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        </button>
+      </div>
     </div>
     <div class="qq">${q.q}</div>
     <div class="qopts" id="qopts">${q.opts.map((o,i)=>`<button class="qopt" data-idx="${i}">${o}</button>`).join("")}</div>
     <div class="qexp" id="qexp">${q.exp}</div>
     <button class="btn btn-p btn-w" id="qnext" style="display:none">${qIdx<qQs.length-1?"Next Question →":"See Results"}</button>
   `;
+  document.getElementById("bm-q").addEventListener("click",()=>{ toggleBookmark(q.id); const b=document.getElementById("bm-q"); if(b){const active=(state.bookmarks||[]).includes(q.id); b.classList.toggle("active",active); b.querySelector("svg").setAttribute("fill",active?"currentColor":"none");} });
   document.querySelectorAll(".qopt").forEach(opt=>{
     opt.addEventListener("click",()=>{
       const chosen=parseInt(opt.dataset.idx);
@@ -1291,6 +1425,7 @@ function renderResult(){
   state.topicsProgress[key].correct+=qScore;
   state.topicsProgress[key].total+=total;
   logActivity("quiz",qTopic,qLevel,`${qScore}/${total}`);
+  markStudyToday();
   saveState();
   const emoji=pct>=70?"🟢":pct>=50?"🟡":"🔴";
   const msg=pct>=70?"Strong — build on this.":pct>=50?"Decent. Review the explanations.":"Revisit this topic — it'll click.";
@@ -1324,28 +1459,29 @@ function renderResult(){
 // ─────────────────────────────────────────────
 // PROGRESS
 // ─────────────────────────────────────────────
+let hmLevel = "L1";
+function renderHeatmap(){
+  const tp = state.topicsProgress||{};
+  const subjects = SUBJECTS[hmLevel];
+  const cells = subjects.map(s=>{
+    const key = `${hmLevel}-${s}`;
+    const d = tp[key];
+    if(!d||!d.total){ return `<div class="hm-cell hm-0"><div class="hm-label">${s}</div><div class="hm-pct" style="color:var(--tf)">—</div></div>`; }
+    const pct = Math.round((d.correct/d.total)*100);
+    const cls = pct>=70?"hm-good":pct>=50?"hm-mid":"hm-low";
+    return `<div class="hm-cell ${cls}"><div class="hm-label">${s}</div><div class="hm-pct">${pct}%</div></div>`;
+  }).join("");
+  const out = document.getElementById("heatmap-out");
+  if(out) out.innerHTML=`<div class="heatmap">${cells}</div>`;
+}
+
 function updateProgressUI(){
   document.getElementById("st-quizzes").textContent=state.quizzesDone||0;
   document.getElementById("st-cards").textContent=state.cardsReviewed||0;
   document.getElementById("st-streak").textContent=state.streak||0;
   const total=state.totalQ||0,correct=state.correctQ||0;
   document.getElementById("st-acc").textContent=total>0?`${Math.round((correct/total)*100)}%`:"—";
-  const tp=state.topicsProgress||{};
-  const keys=Object.keys(tp);
-  if(!keys.length){
-    document.getElementById("tp-card").innerHTML=`<div class="cb" style="color:var(--tf)">Complete quizzes to track subject progress.</div>`;
-  } else {
-    document.getElementById("tp-card").innerHTML=keys.map(k=>{
-      const {correct,total}=tp[k];
-      const pct=Math.round((correct/total)*100);
-      const label=k.replace(/^L\d-/,"");
-      const lv=k.split("-")[0];
-      return `<div class="pbw">
-        <div class="pbh"><span class="pbl">${label} <span class="tag" style="font-size:9px;padding:1px 5px">${lv}</span></span><span class="pbp">${pct}%</span></div>
-        <div class="pbt"><div class="pbf" style="width:${pct}%"></div></div>
-      </div>`;
-    }).join("");
-  }
+  renderHeatmap();
   const log=(state.activityLog||[]).slice(-10).reverse();
   if(!log.length){
     document.getElementById("act-log").innerHTML=`<div class="cb" style="color:var(--tf)">No activity yet.</div>`;
@@ -1633,6 +1769,109 @@ document.getElementById("export-ids-btn").addEventListener("click",()=>{
 // ─────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// BOOKMARK HELPERS
+// ─────────────────────────────────────────────
+function toggleBookmark(id){
+  if(!state.bookmarks) state.bookmarks=[];
+  const idx=state.bookmarks.indexOf(id);
+  if(idx>-1) state.bookmarks.splice(idx,1);
+  else state.bookmarks.push(id);
+  saveState();
+}
+
+// ─────────────────────────────────────────────
+// SEARCH
+// ─────────────────────────────────────────────
+let searchFilter="all";
+["sf-all","sf-quiz","sf-flash","sf-bm"].forEach(id=>{
+  document.getElementById(id).addEventListener("click",()=>{
+    document.querySelectorAll("#view-search .lt").forEach(t=>t.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+    searchFilter=id.replace("sf-","");
+    doSearch(document.getElementById("search-inp").value.trim());
+  });
+});
+
+document.getElementById("search-inp").addEventListener("input",e=>{
+  doSearch(e.target.value.trim());
+});
+
+function doSearch(query){
+  const out=document.getElementById("search-results");
+  const bms=state.bookmarks||[];
+  const q=query.toLowerCase();
+
+  let results=[];
+  ["L1","L2","L3"].forEach(lv=>{
+    SUBJECTS[lv].forEach(subj=>{
+      if(searchFilter==="flash"||searchFilter==="all"||searchFilter==="bm"){
+        (CONTENT.flashcards[lv]?.[subj]||[]).forEach(card=>{
+          if(searchFilter==="bm"&&!bms.includes(card.id)) return;
+          if(q&&!card.front.toLowerCase().includes(q)&&!card.back.toLowerCase().includes(q)) return;
+          results.push({type:"flashcard",lv,subj,id:card.id,title:card.front,body:card.back});
+        });
+      }
+      if(searchFilter==="quiz"||searchFilter==="all"||searchFilter==="bm"){
+        (CONTENT.quizQuestions[lv]?.[subj]||[]).forEach(qq=>{
+          if(searchFilter==="bm"&&!bms.includes(qq.id)) return;
+          if(q&&!qq.q.toLowerCase().includes(q)&&!qq.exp.toLowerCase().includes(q)) return;
+          results.push({type:"quiz",lv,subj,id:qq.id,title:qq.q,body:qq.exp});
+        });
+      }
+    });
+  });
+
+  if(!q&&searchFilter==="all"){
+    out.innerHTML=`<div class="cb" style="color:var(--tf);text-align:center;padding:20px 0">Type to search across all content</div>`;
+    return;
+  }
+  if(!results.length){
+    out.innerHTML=`<div class="cb" style="color:var(--tf);text-align:center;padding:20px 0">No results found</div>`;
+    return;
+  }
+  const limited=results.slice(0,40);
+  out.innerHTML=limited.map(r=>{
+    const isBm=bms.includes(r.id);
+    const typeTag=r.type==="flashcard"?"Flashcard":"Quiz Q";
+    const typeCol=r.type==="flashcard"?"blue":"gold";
+    return `<div class="sr-item">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div class="sr-item-q">${r.title}</div>
+        <button class="bm-btn${isBm?" active":""}" data-bmid="${r.id}" title="Bookmark">
+          <svg viewBox="0 0 24 24" fill="${isBm?"currentColor":"none"}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        </button>
+      </div>
+      <div class="sr-item-meta">
+        <span class="tag ${typeCol}">${typeTag}</span>
+        <span class="tag">${r.lv}</span>
+        <span class="tag">${r.subj}</span>
+      </div>
+    </div>`;
+  }).join("");
+  if(results.length>40) out.innerHTML+=`<div class="cb" style="color:var(--tf);text-align:center;padding:10px 0;font-size:11px">Showing 40 of ${results.length} results — refine your search</div>`;
+
+  // Wire bookmark buttons in results
+  out.querySelectorAll(".bm-btn[data-bmid]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      toggleBookmark(btn.dataset.bmid);
+      doSearch(document.getElementById("search-inp").value.trim());
+    });
+  });
+}
+
+// ─────────────────────────────────────────────
+// HEATMAP TAB SWITCHING
+// ─────────────────────────────────────────────
+document.querySelectorAll("#hm-ltabs .lt").forEach(tab=>{
+  tab.addEventListener("click",()=>{
+    document.querySelectorAll("#hm-ltabs .lt").forEach(t=>t.classList.remove("active"));
+    tab.classList.add("active");
+    hmLevel=tab.dataset.hlv;
+    renderHeatmap();
+  });
+});
+
 // ─────────────────────────────────────────────
 // DARK MODE TOGGLE
 // ─────────────────────────────────────────────

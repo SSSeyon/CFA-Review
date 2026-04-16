@@ -456,7 +456,7 @@ import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/fir
 // ─────────────────────────────────────────────
 // APP VERSION & FIREBASE
 // ─────────────────────────────────────────────
-const APP_VERSION = "1.0.8";
+const APP_VERSION = "1.0.9";
 document.getElementById("app-ver").textContent = APP_VERSION;
 
 const fbApp = initializeApp({
@@ -997,7 +997,7 @@ let state = {
 let CONTENT = JSON.parse(JSON.stringify(BASE_CONTENT));
 
 let flLevel="L1", qLevel="L1";
-let flTopic=null, qTopic=null;
+let flTopics=new Set(), qTopics=new Set();
 let flCards=[], flIdx=0;
 let qQs=[], qIdx=0, qScore=0;
 let dbLevel="L1";
@@ -1157,6 +1157,12 @@ function loadToday(){
   const rQs = CONTENT.quizQuestions[lvKey][rTopic];
   const rQ = rQs[state.conceptIdx % rQs.length];
 
+  // Shuffle today's quick practice options
+  const tIndices=[0,1,2,3];
+  for(let i=tIndices.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[tIndices[i],tIndices[j]]=[tIndices[j],tIndices[i]];}
+  const tOpts=tIndices.map(i=>rQ.opts[i]);
+  const tAns=tIndices.indexOf(rQ.ans);
+
   document.getElementById("today-out").innerHTML = `
     <div class="hero">
       <div class="hero-date">${dateStr}</div>
@@ -1177,7 +1183,7 @@ function loadToday(){
     <div class="card">
       <div class="cb" style="color:var(--text);margin-bottom:11px">${rQ.q}</div>
       <div class="qopts" id="today-opts">
-        ${rQ.opts.map((o,i)=>`<button class="qopt" data-idx="${i}">${o}</button>`).join("")}
+        ${tOpts.map((o,i)=>`<button class="qopt" data-idx="${i}">${o}</button>`).join("")}
       </div>
       <div class="qexp" id="today-exp">${rQ.exp}</div>
     </div>
@@ -1188,8 +1194,8 @@ function loadToday(){
       const chosen=parseInt(opt.dataset.idx);
       document.querySelectorAll("#today-opts .qopt").forEach((o,i)=>{
         o.disabled=true;
-        if(i===rQ.ans) o.classList.add("correct");
-        else if(i===chosen&&chosen!==rQ.ans) o.classList.add("wrong");
+        if(i===tAns) o.classList.add("correct");
+        else if(i===chosen&&chosen!==tAns) o.classList.add("wrong");
       });
       document.getElementById("today-exp").classList.add("show");
       logActivity("concept",c.concept,c.level);
@@ -1202,7 +1208,7 @@ function loadToday(){
 // ─────────────────────────────────────────────
 function buildFlTopics(){
   const grid=document.getElementById("fl-topics");
-  grid.innerHTML=""; flTopic=null;
+  grid.innerHTML=""; flTopics=new Set();
   document.getElementById("fl-start").disabled=true;
   SUBJECTS[flLevel].forEach(t=>{
     const chip=document.createElement("div");
@@ -1214,9 +1220,11 @@ function buildFlTopics(){
     if(!hasCards) chip.style.opacity="0.4";
     chip.addEventListener("click",()=>{
       if(!hasCards){ toast("No flashcards yet — import a content pack"); return; }
-      document.querySelectorAll("#fl-topics .tchip").forEach(c=>c.classList.remove("sel"));
-      chip.classList.add("sel"); flTopic=t;
-      document.getElementById("fl-start").disabled=false;
+      if(flTopics.has(t)){ flTopics.delete(t); chip.classList.remove("sel"); }
+      else { flTopics.add(t); chip.classList.add("sel"); }
+      document.getElementById("fl-start").disabled=flTopics.size===0;
+      const n=flTopics.size;
+      document.getElementById("fl-start").textContent = n>1?`Start Flashcards (${n} subjects)`:"Start Flashcards";
     });
     grid.appendChild(chip);
   });
@@ -1251,9 +1259,10 @@ function getDueCards(level, topic){
 }
 
 function startFlash(){
-  if(!flTopic) return;
+  if(flTopics.size===0) return;
   const today = Math.floor(Date.now()/86400000);
-  const all = [...(CONTENT.flashcards[flLevel][flTopic]||[])];
+  let all = [];
+  flTopics.forEach(t=>{ all = all.concat(CONTENT.flashcards[flLevel][t]||[]); });
   // Sort: due cards first, then by due date ascending
   all.sort((a,b)=>{
     const sa=(state.srsData||{})[a.id]||{due:0};
@@ -1357,19 +1366,20 @@ function renderFlCard(){
       state.cardsReviewed=(state.cardsReviewed||0)+1;
       if(flIdx<flCards.length-1){ flIdx++; renderFlCard(); }
       else {
-        const dueCount = getDueCards(flLevel, flTopic).length;
+        const dueCount = [...flTopics].reduce((s,t)=>s+getDueCards(flLevel,t).length,0);
+        const flTopicLabel=[...flTopics].join(", ");
         document.getElementById("fl-card-out").innerHTML=`
           <div class="card" style="text-align:center;padding:26px 16px">
             <div style="font-size:28px;margin-bottom:9px">🎯</div>
             <div class="ct" style="margin-bottom:5px">Deck Complete!</div>
-            <div class="cb">You reviewed ${flCards.length} cards on ${flTopic}.</div>
+            <div class="cb">You reviewed ${flCards.length} cards on ${flTopicLabel}.</div>
             ${dueCount>0?`<div class="cb" style="margin-top:6px;color:var(--amber)">⚡ ${dueCount} card${dueCount>1?"s":""} due for review</div>`:""}
             <div style="margin-top:13px;display:flex;gap:6px">
               <button class="btn btn-g" style="flex:1" id="fl-again">Again</button>
               <button class="btn btn-p" style="flex:1" id="fl-newtopic">New Subject</button>
             </div>
           </div>`;
-        logActivity("flash",flTopic,flLevel);
+        logActivity("flash",[...flTopics].join(", "),flLevel);
         markStudyToday();
         saveState();
         document.getElementById("fl-again").addEventListener("click",startFlash);
@@ -1387,7 +1397,7 @@ function renderFlCard(){
 // ─────────────────────────────────────────────
 function buildQTopics(){
   const grid=document.getElementById("q-topics");
-  grid.innerHTML=""; qTopic=null;
+  grid.innerHTML=""; qTopics=new Set();
   document.getElementById("q-start").disabled=true;
   SUBJECTS[qLevel].forEach(t=>{
     const chip=document.createElement("div");
@@ -1396,9 +1406,11 @@ function buildQTopics(){
     if(!hasQs) chip.style.opacity="0.4";
     chip.addEventListener("click",()=>{
       if(!hasQs){ toast("No questions yet — import a content pack"); return; }
-      document.querySelectorAll("#q-topics .tchip").forEach(c=>c.classList.remove("sel"));
-      chip.classList.add("sel"); qTopic=t;
-      document.getElementById("q-start").disabled=false;
+      if(qTopics.has(t)){ qTopics.delete(t); chip.classList.remove("sel"); }
+      else { qTopics.add(t); chip.classList.add("sel"); }
+      document.getElementById("q-start").disabled=qTopics.size===0;
+      const n=qTopics.size;
+      document.getElementById("q-start").textContent = n>1?`Start Quiz (${n} subjects)`:"Start Quiz";
     });
     grid.appendChild(chip);
   });
@@ -1416,11 +1428,20 @@ document.querySelectorAll("#qltabs .lt").forEach(tab=>{
 document.getElementById("q-start").addEventListener("click",startQuiz);
 
 function startQuiz(){
-  if(!qTopic) return;
-  const pool=[...(CONTENT.quizQuestions[qLevel][qTopic]||[])];
-  if(!pool.length){ toast("No questions for this subject yet"); return; }
+  if(qTopics.size===0) return;
+  let pool=[];
+  qTopics.forEach(t=>{ pool=pool.concat(CONTENT.quizQuestions[qLevel][t]||[]); });
+  if(!pool.length){ toast("No questions for these subjects yet"); return; }
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
-  qQs=pool.slice(0,quizCount); qIdx=0; qScore=0;
+  // Shuffle answer options and update correct answer index
+  qQs=pool.slice(0,quizCount).map(q=>{
+    const indices=[0,1,2,3];
+    for(let i=indices.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[indices[i],indices[j]]=[indices[j],indices[i]];}
+    const newOpts=indices.map(i=>q.opts[i]);
+    const newAns=indices.indexOf(q.ans);
+    return {...q, opts:newOpts, ans:newAns};
+  });
+  qIdx=0; qScore=0;
   document.getElementById("q-topic-sec").style.display="none";
   document.getElementById("q-session-sec").style.display="block";
   renderQuestion();
@@ -1438,7 +1459,7 @@ function renderQuestion(){
         <button class="btn btn-g btn-sm" id="q-exit">🏠</button>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
-        <span class="tag gold">${qTopic}</span>
+        <span class="tag gold">${[...qTopics].join(", ").length>25?[...qTopics].length+" subjects":[...qTopics].join(", ")}</span>
         <button class="bm-btn${qIsBm?" active":""}" id="bm-q" title="Bookmark">
           <svg viewBox="0 0 24 24" fill="${qIsBm?"currentColor":"none"}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
         </button>
@@ -1482,13 +1503,14 @@ function renderResult(){
   state.quizzesDone=(state.quizzesDone||0)+1;
   state.totalQ=(state.totalQ||0)+total;
   state.correctQ=(state.correctQ||0)+qScore;
-  const key=`${qLevel}-${qTopic}`;
+  const topicLabel=[...qTopics].join(", ");
+  const key=qTopics.size===1?`${qLevel}-${[...qTopics][0]}`:`${qLevel}-Mixed`;
   if(!state.topicsProgress) state.topicsProgress={};
   if(!state.topicsProgress[key]) state.topicsProgress[key]={attempts:0,correct:0,total:0};
   state.topicsProgress[key].attempts++;
   state.topicsProgress[key].correct+=qScore;
   state.topicsProgress[key].total+=total;
-  logActivity("quiz",qTopic,qLevel,`${qScore}/${total}`);
+  logActivity("quiz",[...qTopics].join(", "),qLevel,`${qScore}/${total}`);
   markStudyToday();
   saveState();
   const emoji=pct>=70?"🟢":pct>=50?"🟡":"🔴";
@@ -1496,7 +1518,7 @@ function renderResult(){
   document.getElementById("q-out").innerHTML=`
     <div class="card" style="text-align:center">
       <div class="ct" style="margin-bottom:3px">Result ${emoji}</div>
-      <div class="cb" style="margin-bottom:14px">${qTopic} · ${qLevel}</div>
+      <div class="cb" style="margin-bottom:14px">${topicLabel} · ${qLevel}</div>
       <div class="srw">
         <div class="sr">
           <svg viewBox="0 0 96 96">

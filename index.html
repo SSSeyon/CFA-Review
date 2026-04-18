@@ -173,6 +173,32 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
 .vlog-info{}
 .vlog-desc{font-size:12px;color:var(--td);line-height:1.5}
 .vlog-date{font-size:10px;color:var(--tf);margin-top:2px}
+/* Notes */
+.note-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+.note-chip{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:11px 10px;cursor:pointer;transition:all var(--t);position:relative}
+.note-chip:hover{border-color:var(--gbord);background:var(--s2)}
+.note-chip.has-note{border-color:rgba(90,156,245,.25)}
+.note-chip-title{font-size:11.5px;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:3px}
+.note-chip-meta{font-size:10px;color:var(--tf)}
+.note-chip.no-note{opacity:0.45;cursor:default}
+.note-empty{text-align:center;padding:28px 16px;color:var(--tf);font-size:12.5px;line-height:1.7}
+.note-body{animation:fup .22s ease}
+.note-back-btn{display:flex;align-items:center;gap:6px;margin-bottom:14px}
+.note-title{font-family:'Libre Baskerville',serif;font-size:20px;font-weight:700;line-height:1.25;margin-bottom:4px}
+.note-subject-tag{margin-bottom:14px}
+.note-section{margin-bottom:16px}
+.note-section-heading{font-size:10px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--gold);margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid var(--gbord)}
+.note-section-body{font-size:13px;color:var(--td);line-height:1.85}
+.note-formula{background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:9px 13px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gl);margin:8px 0;text-align:center}
+.note-traps{background:rgba(239,108,108,.07);border:1px solid rgba(239,108,108,.18);border-radius:var(--rs);padding:11px 13px;margin-bottom:16px}
+.note-traps-heading{font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--red);margin-bottom:7px}
+.note-trap-item{font-size:12.5px;color:var(--td);padding:3px 0;padding-left:12px;position:relative;line-height:1.6}
+.note-trap-item::before{content:"⚠";position:absolute;left:0;font-size:10px}
+.note-summary{background:var(--gdim);border:1px solid var(--gbord);border-radius:var(--rs);padding:11px 13px;margin-bottom:16px}
+.note-summary-heading{font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--gl);margin-bottom:7px}
+.note-summary-item{font-size:12.5px;color:var(--td);padding:3px 0;padding-left:14px;position:relative;line-height:1.6}
+.note-summary-item::before{content:"→";position:absolute;left:0;color:var(--gold);font-size:11px}
+.note-action-bar{display:flex;gap:7px;margin-top:6px;margin-bottom:20px}
 /* Search */
 .search-wrap{position:relative;margin-bottom:12px}
 .search-inp{width:100%;background:var(--s1);border:1px solid var(--border2);border-radius:var(--rs);padding:9px 12px 9px 34px;font-size:13px;font-family:'Outfit',sans-serif;color:var(--text);outline:none;transition:border var(--t)}
@@ -306,6 +332,26 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
       <div class="card" id="act-log"><div class="cb" style="color:var(--tf)">No activity yet.</div></div>
     </div>
 
+    <!-- NOTES -->
+    <div class="view" id="view-notes">
+      <div id="notes-subject-sec">
+        <div class="ltabs" id="nltabs">
+          <div class="lt active" data-nlv="L1">Level I</div>
+          <div class="lt" data-nlv="L2">Level II</div>
+          <div class="lt" data-nlv="L3">Level III</div>
+        </div>
+        <div class="note-grid" id="notes-grid"></div>
+        <div class="note-empty" id="notes-empty" style="display:none">
+          <div style="font-size:28px;margin-bottom:9px">📖</div>
+          <div>No study notes yet for this level.</div>
+          <div style="margin-top:6px;font-size:11.5px">Import a notes content pack from the Settings tab.</div>
+        </div>
+      </div>
+      <div id="notes-detail-sec" style="display:none">
+        <div id="notes-detail-out"></div>
+      </div>
+    </div>
+
     <!-- SEARCH -->
     <div class="view" id="view-search">
       <div class="search-wrap">
@@ -433,6 +479,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       <span>Quiz</span>
     </button>
+    <button class="nb" data-view="notes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span>Notes</span>
+    </button>
     <button class="nb" data-view="progress">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       <span>Progress</span>
@@ -456,7 +506,7 @@ import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/fir
 // ─────────────────────────────────────────────
 // APP VERSION & FIREBASE
 // ─────────────────────────────────────────────
-const APP_VERSION = "1.0.9";
+const APP_VERSION = "1.1.0";
 document.getElementById("app-ver").textContent = APP_VERSION;
 
 const fbApp = initializeApp({
@@ -995,6 +1045,7 @@ let state = {
 
 // Runtime content store — base + imports merged
 let CONTENT = JSON.parse(JSON.stringify(BASE_CONTENT));
+CONTENT.studyNotes = {}; // { L1: { "Subject": noteObj }, L2: {...}, L3: {...} }
 
 let flLevel="L1", qLevel="L1";
 let flTopics=new Set(), qTopics=new Set();
@@ -1070,7 +1121,7 @@ function startRealtimeSync(){
     const afterIds = getAllContentIds().size;
     const newItems = afterIds - beforeIds;
     if(newItems > 0){
-      buildFlTopics(); buildQTopics(); renderDB();
+      buildFlTopics(); buildQTopics(); renderDB(); buildNotesGrid();
       toast(`✓ ${newItems} new item${newItems>1?"s":""} synced from another device`);
     }
   });
@@ -1122,6 +1173,9 @@ function switchTab(v){
   sessionStorage.setItem("cfa_active_tab", v);
   if(v==="progress") updateProgressUI();
   if(v==="db") renderDB();
+  if(v==="settings"){ renderDB(); updateSettingsUI(); }
+  if(v==="search") doSearch(document.getElementById("search-inp").value.trim());
+  if(v==="notes") buildNotesGrid();
 }
 document.querySelectorAll(".nb").forEach(btn=>{
   btn.addEventListener("click",()=>switchTab(btn.dataset.view));
@@ -1619,16 +1673,18 @@ function renderDB(){
 
   const rows = subjects.map(s=>{
     const {q,f} = countContent(dbLevel,s);
+    const hasNote = !!(CONTENT.studyNotes[dbLevel]?.[s]);
     return `<tr>
       <td>${s}</td>
       <td><span class="${q>0?"db-num":"db-zero"}">${q}</span></td>
       <td><span class="${f>0?"db-num":"db-zero"}">${f}</span></td>
+      <td><span class="${hasNote?"db-num":"db-zero"}">${hasNote?"✓":"—"}</span></td>
     </tr>`;
   }).join("");
 
   document.getElementById("db-table-out").innerHTML=`
     <table class="db-table">
-      <thead><tr><th>Subject</th><th>Quiz Qs</th><th>Flashcards</th></tr></thead>
+      <thead><tr><th>Subject</th><th>Quiz Qs</th><th>Cards</th><th>Note</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
 
@@ -1796,6 +1852,9 @@ function mergeContent(imported, notify=true){
       CONTENT.flashcards[item.level][item.subject].push({id:item.id,front:item.front,back:item.back});
     } else if(item.type==="concept"){
       CONTENT.dailyConcepts.push({id:item.id,level:item.level,subject:item.subject,concept:item.concept,explanation:item.explanation,formula:item.formula||null,keyTakeaway:item.keyTakeaway});
+    } else if(item.type==="note"){
+      if(!CONTENT.studyNotes[item.level]) CONTENT.studyNotes[item.level]={};
+      CONTENT.studyNotes[item.level][item.subject] = item; // one note per subject
     }
     added++;
   });
@@ -1815,6 +1874,7 @@ function collectImportedContent(){
   ["L1","L2","L3"].forEach(lv=>{
     Object.entries(CONTENT.flashcards[lv]||{}).forEach(([subj,arr])=>arr.forEach(f=>{ if(!baseIds.has(f.id)) items.push({type:"flashcard",level:lv,subject:subj,...f}); }));
     Object.entries(CONTENT.quizQuestions[lv]||{}).forEach(([subj,arr])=>arr.forEach(q=>{ if(!baseIds.has(q.id)) items.push({type:"quiz",level:lv,subject:subj,...q}); }));
+    Object.entries(CONTENT.studyNotes[lv]||{}).forEach(([subj,n])=>{ if(!baseIds.has(n.id)) items.push({...n}); });
   });
   return {items};
 }
@@ -1825,6 +1885,7 @@ function getAllContentIds(){
   ["L1","L2","L3"].forEach(lv=>{
     Object.values(CONTENT.flashcards[lv]||{}).forEach(arr=>arr.forEach(f=>ids.add(f.id)));
     Object.values(CONTENT.quizQuestions[lv]||{}).forEach(arr=>arr.forEach(q=>ids.add(q.id)));
+    Object.values(CONTENT.studyNotes[lv]||{}).forEach(n=>ids.add(n.id));
   });
   return ids;
 }
@@ -1955,6 +2016,143 @@ document.querySelectorAll("#hm-ltabs .lt").forEach(tab=>{
     tab.classList.add("active");
     hmLevel=tab.dataset.hlv;
     renderHeatmap();
+  });
+});
+
+// ─────────────────────────────────────────────
+// STUDY NOTES
+// ─────────────────────────────────────────────
+let notesLevel = "L1";
+
+function buildNotesGrid(){
+  const subjects = SUBJECTS[notesLevel];
+  const notes = CONTENT.studyNotes[notesLevel]||{};
+  const grid = document.getElementById("notes-grid");
+  const empty = document.getElementById("notes-empty");
+  const hasAny = Object.keys(notes).length > 0;
+  grid.innerHTML = "";
+  if(!hasAny){
+    grid.style.display="none";
+    empty.style.display="block";
+    return;
+  }
+  grid.style.display="grid";
+  empty.style.display="none";
+  subjects.forEach(subj=>{
+    const note = notes[subj];
+    const chip = document.createElement("div");
+    chip.className = note ? "note-chip has-note" : "note-chip no-note";
+    chip.innerHTML = `
+      <div class="note-chip-title">${subj}</div>
+      <div class="note-chip-meta">${note ? (note.sections||[]).length+" sections" : "No note yet"}</div>
+    `;
+    if(note){
+      chip.addEventListener("click",()=>openNote(note, subj));
+    }
+    grid.appendChild(chip);
+  });
+}
+
+function openNote(note, subj){
+  document.getElementById("notes-subject-sec").style.display="none";
+  const det = document.getElementById("notes-detail-sec");
+  det.style.display="block";
+
+  const lvColour = notesLevel==="L1"?"blue":notesLevel==="L2"?"purple":"gold";
+  const sections = (note.sections||[]).map(s=>`
+    <div class="note-section">
+      <div class="note-section-heading">${s.heading}</div>
+      <div class="note-section-body">${s.body}</div>
+      ${s.formula?`<div class="note-formula">${s.formula}</div>`:""}
+    </div>
+  `).join("");
+
+  const traps = note.traps&&note.traps.length ? `
+    <div class="note-traps">
+      <div class="note-traps-heading">⚠ Common Pitfalls</div>
+      ${note.traps.map(t=>`<div class="note-trap-item">${t}</div>`).join("")}
+    </div>` : "";
+
+  const summary = note.summary&&note.summary.length ? `
+    <div class="note-summary">
+      <div class="note-summary-heading">Key Takeaways</div>
+      ${note.summary.map(s=>`<div class="note-summary-item">${s}</div>`).join("")}
+    </div>` : "";
+
+  document.getElementById("notes-detail-out").innerHTML = `
+    <div class="note-body">
+      <div class="note-back-btn">
+        <button class="btn btn-g btn-sm" id="notes-back">← Subjects</button>
+        <button class="btn btn-g btn-sm" id="notes-home">🏠</button>
+      </div>
+      <div class="note-title">${note.title||subj}</div>
+      <div class="note-subject-tag">
+        <span class="tag ${lvColour}">${notesLevel==="L1"?"Level I":notesLevel==="L2"?"Level II":"Level III"}</span>
+        <span class="tag" style="margin-left:4px">${subj}</span>
+      </div>
+      ${sections}
+      ${traps}
+      ${summary}
+      <div class="note-action-bar">
+        <button class="btn btn-g" style="flex:1" id="note-to-flash">→ Flashcards</button>
+        <button class="btn btn-p" style="flex:1" id="note-to-quiz">→ Quiz</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("notes-back").addEventListener("click",()=>{
+    det.style.display="none";
+    document.getElementById("notes-subject-sec").style.display="block";
+  });
+  document.getElementById("notes-home").addEventListener("click",()=>{
+    det.style.display="none";
+    document.getElementById("notes-subject-sec").style.display="block";
+    switchTab("today");
+  });
+  // Jump to flashcards for this subject
+  document.getElementById("note-to-flash").addEventListener("click",()=>{
+    det.style.display="none";
+    document.getElementById("notes-subject-sec").style.display="block";
+    switchTab("flash");
+    // Set the correct level tab
+    document.querySelectorAll("#fltabs .lt").forEach(t=>{
+      t.classList.toggle("active", t.dataset.lv===notesLevel);
+    });
+    flLevel=notesLevel; buildFlTopics();
+    // Auto-select this subject if it has cards
+    setTimeout(()=>{
+      const chips=[...document.querySelectorAll("#fl-topics .tchip")];
+      const match=chips.find(c=>c.textContent.startsWith(subj));
+      if(match&&!(CONTENT.flashcards[notesLevel]?.[subj]||[]).length===0) match.click();
+    },50);
+  });
+  // Jump to quiz for this subject
+  document.getElementById("note-to-quiz").addEventListener("click",()=>{
+    det.style.display="none";
+    document.getElementById("notes-subject-sec").style.display="block";
+    switchTab("quiz");
+    document.querySelectorAll("#qltabs .lt").forEach(t=>{
+      t.classList.toggle("active", t.dataset.lv===notesLevel);
+    });
+    qLevel=notesLevel; buildQTopics();
+    setTimeout(()=>{
+      const chips=[...document.querySelectorAll("#q-topics .tchip")];
+      const match=chips.find(c=>c.textContent===subj);
+      if(match) match.click();
+    },50);
+  });
+
+  logActivity("note",subj,notesLevel==="L1"?"Level I":notesLevel==="L2"?"Level II":"Level III");
+}
+
+document.querySelectorAll("#nltabs .lt").forEach(tab=>{
+  tab.addEventListener("click",()=>{
+    document.querySelectorAll("#nltabs .lt").forEach(t=>t.classList.remove("active"));
+    tab.classList.add("active");
+    notesLevel=tab.dataset.nlv;
+    document.getElementById("notes-detail-sec").style.display="none";
+    document.getElementById("notes-subject-sec").style.display="block";
+    buildNotesGrid();
   });
 });
 

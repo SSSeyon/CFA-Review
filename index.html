@@ -506,7 +506,7 @@ import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/fir
 // ─────────────────────────────────────────────
 // APP VERSION & FIREBASE
 // ─────────────────────────────────────────────
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "1.1.1";
 document.getElementById("app-ver").textContent = APP_VERSION;
 
 const fbApp = initializeApp({
@@ -1763,25 +1763,28 @@ function validateAndPreviewImport(data){
 
   // Count by type, check for duplicates
   const existingIds = getAllContentIds();
-  let newQ=0, newF=0, newC=0, skipped=0;
+  let newQ=0, newF=0, newC=0, newN=0, skipped=0;
   data.items.forEach(item=>{
     if(existingIds.has(item.id)){ skipped++; return; }
     if(item.type==="quiz") newQ++;
     else if(item.type==="flashcard") newF++;
     else if(item.type==="concept") newC++;
+    else if(item.type==="note") newN++;
   });
 
+  const totalNew = newQ+newF+newC+newN;
   document.getElementById("import-preview").innerHTML=`
     <div class="preview-card">
       <div class="preview-title">Import Preview — v${data.version}</div>
       <div class="preview-row"><span>${data.description||"Content pack"}</span></div>
-      <div class="preview-row"><span>New quiz questions</span><span class="db-num">${newQ}</span></div>
-      <div class="preview-row"><span>New flashcards</span><span class="db-num">${newF}</span></div>
-      <div class="preview-row"><span>New daily concepts</span><span class="db-num">${newC}</span></div>
-      <div class="preview-row"><span style="color:var(--tf)">Skipped (already exist)</span><span style="color:var(--tf)">${skipped}</span></div>
+      ${newQ>0?`<div class="preview-row"><span>New quiz questions</span><span class="db-num">${newQ}</span></div>`:""}
+      ${newF>0?`<div class="preview-row"><span>New flashcards</span><span class="db-num">${newF}</span></div>`:""}
+      ${newC>0?`<div class="preview-row"><span>New daily concepts</span><span class="db-num">${newC}</span></div>`:""}
+      ${newN>0?`<div class="preview-row"><span>New study notes</span><span class="db-num">${newN}</span></div>`:""}
+      ${skipped>0?`<div class="preview-row"><span style="color:var(--tf)">Skipped (already exist)</span><span style="color:var(--tf)">${skipped}</span></div>`:""}
       <div style="margin-top:10px;display:flex;gap:6px">
         <button class="btn btn-g" style="flex:1" id="cancel-import">Cancel</button>
-        <button class="btn btn-p" style="flex:1" id="confirm-import">Import ${newQ+newF+newC} items</button>
+        <button class="btn btn-p" style="flex:1" id="confirm-import">Import ${totalNew} item${totalNew!==1?"s":""}</button>
       </div>
     </div>`;
 
@@ -1789,7 +1792,7 @@ function validateAndPreviewImport(data){
     document.getElementById("import-preview").innerHTML="";
     fileInput.value="";
   });
-  document.getElementById("confirm-import").addEventListener("click",()=>confirmImport(data, {newQ,newF,newC,skipped}));
+  document.getElementById("confirm-import").addEventListener("click",()=>confirmImport(data, {newQ,newF,newC,newN,skipped}));
 }
 
 function confirmImport(data, counts){
@@ -1806,6 +1809,9 @@ function confirmImport(data, counts){
       CONTENT.flashcards[item.level][item.subject].push({id:item.id,front:item.front,back:item.back});
     } else if(item.type==="concept"){
       CONTENT.dailyConcepts.push({id:item.id,level:item.level,subject:item.subject,concept:item.concept,explanation:item.explanation,formula:item.formula||null,keyTakeaway:item.keyTakeaway});
+    } else if(item.type==="note"){
+      if(!CONTENT.studyNotes[item.level]) CONTENT.studyNotes[item.level]={};
+      CONTENT.studyNotes[item.level][item.subject] = item;
     }
   });
 
@@ -1813,21 +1819,30 @@ function confirmImport(data, counts){
   if(!state.versionLog) state.versionLog=[];
   const patchNum = state.versionLog.length + 1;
   const nextVersion = `1.0.${patchNum}`;
+  const parts=[];
+  if(counts.newQ) parts.push(`+${counts.newQ} quiz Qs`);
+  if(counts.newF) parts.push(`+${counts.newF} flashcards`);
+  if(counts.newC) parts.push(`+${counts.newC} concepts`);
+  if(counts.newN) parts.push(`+${counts.newN} study notes`);
   state.versionLog.push({
     version:nextVersion,
-    description:`${data.description||"Content pack"} — +${counts.newQ} quiz Qs, +${counts.newF} flashcards, +${counts.newC} concepts`,
+    description:`${data.description||"Content pack"} — ${parts.join(", ")}`,
     date:new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})
   });
   document.getElementById("app-ver").textContent=nextVersion;
+
+  // Rebuild notes grid if currently visible
+  buildNotesGrid();
 
   // Save to Firebase
   saveState();
   saveImportedContent(collectImportedContent());
 
+  const totalAdded = (counts.newQ||0)+(counts.newF||0)+(counts.newC||0)+(counts.newN||0);
   document.getElementById("import-preview").innerHTML=`
     <div class="preview-card" style="border-color:var(--green)">
       <div class="preview-title" style="color:var(--green)">✓ Import successful — ${nextVersion}</div>
-      <div class="cb">${counts.newQ+counts.newF+counts.newC} items added. ${counts.skipped} duplicates skipped.</div>
+      <div class="cb">${totalAdded} item${totalAdded!==1?"s":""} added. ${counts.skipped} duplicates skipped.</div>
     </div>`;
 
   // Refresh topics and DB

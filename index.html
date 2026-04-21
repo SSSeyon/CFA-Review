@@ -237,15 +237,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
 .step-btn{width:26px;height:26px;border-radius:50%;border:1px solid var(--border2);background:var(--s2);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--t);line-height:1}
 .step-btn:hover{background:var(--s3);border-color:var(--gbord)}
 .step-val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--gl);min-width:20px;text-align:center}
-/* TTS */
-.tts-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--s2);color:var(--td);cursor:pointer;font-size:11px;font-family:'Outfit',sans-serif;font-weight:500;transition:all var(--t);white-space:nowrap;flex-shrink:0}
-.tts-btn:hover{border-color:var(--gbord);color:var(--gl);background:var(--gdim)}
-.tts-btn.playing{border-color:var(--gold);color:var(--gold);background:var(--gdim)}
-.tts-btn svg{width:13px;height:13px}
-.tts-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:7px}
-.tts-progress{display:flex;gap:3px;align-items:center;font-size:10px;color:var(--tf)}
-.tts-pip{width:4px;height:4px;border-radius:50%;background:var(--tf);transition:background var(--t)}
-.tts-pip.active{background:var(--gold)}
 #toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--s2);border:1px solid var(--border2);border-radius:var(--rs);padding:7px 14px;font-size:12px;color:var(--text);opacity:0;transition:all .2s ease;pointer-events:none;z-index:200;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.5)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
@@ -515,7 +506,7 @@ import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/fir
 // ─────────────────────────────────────────────
 // APP VERSION & FIREBASE
 // ─────────────────────────────────────────────
-const APP_VERSION = "1.1.2";
+const APP_VERSION = "1.1.1";
 document.getElementById("app-ver").textContent = APP_VERSION;
 
 const fbApp = initializeApp({
@@ -1237,7 +1228,6 @@ function loadToday(){
       </div>
       <div class="hero-body">${c.explanation}</div>
       ${c.formula?`<div class="formula">${c.formula}</div>`:""}
-      <div style="margin-top:10px">${ttsBtn("tts-today")}</div>
     </div>
     <div class="lbl">Key Takeaway</div>
     <div class="card" style="border-left:3px solid var(--gold)">
@@ -1252,21 +1242,6 @@ function loadToday(){
       <div class="qexp" id="today-exp">${rQ.exp}</div>
     </div>
   `;
-
-  // Wire TTS for today
-  const ttsBtn_today = document.getElementById("tts-today");
-  if(ttsBtn_today && TTS.supported){
-    const segments = [c.concept + ". " + c.explanation, "Key takeaway: " + c.keyTakeaway];
-    ttsBtn_today.addEventListener("click",()=>{
-      TTS.toggle(segments, (idx)=>{
-        if(!document.getElementById("tts-today")) return;
-        document.getElementById("tts-today").outerHTML = idx>=0 ? ttsBtnStop().replace('</button>','</button>') : ttsBtn("tts-today");
-        // re-wire since outerHTML replaces the node
-        const nb = document.getElementById("tts-today");
-        if(nb) nb.addEventListener("click",()=>TTS.stop());
-      });
-    });
-  } else if(ttsBtn_today){ ttsBtn_today.style.display="none"; }
 
   document.querySelectorAll("#today-opts .qopt").forEach(opt=>{
     opt.addEventListener("click",()=>{
@@ -1320,7 +1295,6 @@ document.querySelectorAll("#fltabs .lt").forEach(tab=>{
 
 document.getElementById("fl-start").addEventListener("click",startFlash);
 document.getElementById("fl-back").addEventListener("click",()=>{
-  TTS.stop();
   document.getElementById("fl-card-sec").style.display="none";
   document.getElementById("fl-topic-sec").style.display="block";
 });
@@ -1374,23 +1348,14 @@ function renderFlCard(){
       <div class="fc" id="fcinner">
         <div class="fcf fc-front">
           <div style="display:flex;justify-content:space-between;width:100%;margin-bottom:8px">
-            <div style="display:flex;align-items:center;gap:6px">
-              <div class="fc-hint">Tap to reveal</div>
-              ${TTS.supported?ttsBtn("tts-fc-front"):""}
-            </div>
+            <div class="fc-hint">Tap to reveal</div>
             <button class="bm-btn${isBm?" active":""}" id="bm-fl" title="Bookmark">
               <svg viewBox="0 0 24 24" fill="${isBm?"currentColor":"none"}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
             </button>
           </div>
           <div class="fc-q">${card.front}</div>
         </div>
-        <div class="fcf fc-back">
-          <div style="display:flex;justify-content:space-between;width:100%;margin-bottom:8px">
-            <div class="fc-hint">Answer</div>
-            ${TTS.supported?ttsBtn("tts-fc-back"):""}
-          </div>
-          <div class="fc-a">${card.back}</div>
-        </div>
+        <div class="fcf fc-back"><div class="fc-hint">Answer</div><div class="fc-a">${card.back}</div></div>
       </div>
     </div>
     <div class="fcnav" id="fcnav" style="display:none">
@@ -1404,11 +1369,6 @@ function renderFlCard(){
     toggleBookmark(card.id);
     renderFlCard();
   });
-  // Wire TTS for flashcard front and back
-  const ttsFront = document.getElementById("tts-fc-front");
-  const ttsBack  = document.getElementById("tts-fc-back");
-  if(ttsFront) ttsFront.addEventListener("click",(e)=>{ e.stopPropagation(); TTS.toggle([card.front], ()=>{}); });
-  if(ttsBack)  ttsBack.addEventListener("click",(e)=>{ e.stopPropagation(); TTS.toggle([card.back], ()=>{}); });
   // Tap to flip
   document.getElementById("fcwrap").addEventListener("click",()=>{
     document.getElementById("fcinner").classList.toggle("flipped");
@@ -2134,26 +2094,11 @@ function openNote(note, subj){
       ${note.summary.map(s=>`<div class="note-summary-item">${s}</div>`).join("")}
     </div>` : "";
 
-  // Build TTS segment list from note sections
-  const ttsSegments = [];
-  if(note.title) ttsSegments.push(note.title);
-  (note.sections||[]).forEach(s=>{ ttsSegments.push(s.heading + ". " + s.body); });
-  if(note.traps&&note.traps.length) ttsSegments.push("Common pitfalls. " + note.traps.join(". "));
-  if(note.summary&&note.summary.length) ttsSegments.push("Key takeaways. " + note.summary.join(". "));
-
   document.getElementById("notes-detail-out").innerHTML = `
     <div class="note-body">
-      <div class="tts-bar">
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-g btn-sm" id="notes-back">← Subjects</button>
-          <button class="btn btn-g btn-sm" id="notes-home">🏠</button>
-        </div>
-        ${TTS.supported ? `<div style="display:flex;align-items:center;gap:7px">
-          ${ttsBtn("tts-note")}
-          <div class="tts-progress" id="tts-note-progress" style="display:none">
-            ${ttsSegments.map((_,i)=>`<div class="tts-pip" id="tts-pip-${i}"></div>`).join("")}
-          </div>
-        </div>` : ""}
+      <div class="note-back-btn">
+        <button class="btn btn-g btn-sm" id="notes-back">← Subjects</button>
+        <button class="btn btn-g btn-sm" id="notes-home">🏠</button>
       </div>
       <div class="note-title">${note.title||subj}</div>
       <div class="note-subject-tag">
@@ -2171,38 +2116,9 @@ function openNote(note, subj){
   `;
 
   document.getElementById("notes-back").addEventListener("click",()=>{
-    TTS.stop();
     det.style.display="none";
     document.getElementById("notes-subject-sec").style.display="block";
   });
-  // Wire TTS for note reading
-  const ttsNoteBtn = document.getElementById("tts-note");
-  if(ttsNoteBtn){
-    ttsNoteBtn.addEventListener("click",()=>{
-      if(TTS.speaking){
-        TTS.stop();
-        ttsNoteBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg> Listen`;
-        ttsNoteBtn.classList.remove("playing");
-        const prog = document.getElementById("tts-note-progress");
-        if(prog) prog.style.display="none";
-        document.querySelectorAll(".tts-pip").forEach(p=>p.classList.remove("active"));
-      } else {
-        ttsNoteBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="1"/></svg> Stop`;
-        ttsNoteBtn.classList.add("playing");
-        const prog = document.getElementById("tts-note-progress");
-        if(prog) prog.style.display="flex";
-        TTS.speak(ttsSegments, (idx)=>{
-          document.querySelectorAll(".tts-pip").forEach((p,i)=>p.classList.toggle("active", i===idx));
-          if(idx===-1){
-            if(!document.getElementById("tts-note")) return;
-            ttsNoteBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg> Listen`;
-            ttsNoteBtn.classList.remove("playing");
-            if(prog) prog.style.display="none";
-          }
-        });
-      }
-    });
-  }
   document.getElementById("notes-home").addEventListener("click",()=>{
     det.style.display="none";
     document.getElementById("notes-subject-sec").style.display="block";
@@ -2254,98 +2170,6 @@ document.querySelectorAll("#nltabs .lt").forEach(tab=>{
     buildNotesGrid();
   });
 });
-
-// ─────────────────────────────────────────────
-// TEXT-TO-SPEECH ENGINE
-// ─────────────────────────────────────────────
-const TTS = {
-  supported: "speechSynthesis" in window,
-  speaking: false,
-  queue: [],
-  currentIdx: 0,
-  onUpdate: null,
-
-  // Clean text for speech — strip formulas, markdown artifacts, special chars
-  clean(text){
-    return text
-      .replace(/[A-Za-z0-9\s]+=[^.;]+[;.]?/g, s => s.length < 40 ? "— see formula on screen —" : s)
-      .replace(/[×÷≈≥≤∑∫√σβαπρΣΔ]/g, " ")
-      .replace(/[_*`~]/g, "")
-      .replace(/\s{2,}/g, " ")
-      .trim();
-  },
-
-  speak(segments, onUpdate){
-    if(!this.supported) return;
-    this.stop();
-    this.queue = segments.filter(s=>s && s.trim().length > 0);
-    this.currentIdx = 0;
-    this.speaking = true;
-    this.onUpdate = onUpdate || null;
-    this._next();
-  },
-
-  _next(){
-    if(this.currentIdx >= this.queue.length){
-      this.speaking = false;
-      if(this.onUpdate) this.onUpdate(-1); // -1 = done
-      return;
-    }
-    const utt = new SpeechSynthesisUtterance(this.clean(this.queue[this.currentIdx]));
-    utt.rate = 0.92;
-    utt.pitch = 1;
-    utt.lang = "en-GB";
-    // prefer a natural English voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const pref = voices.find(v=>v.lang.startsWith("en")&&v.localService) || voices.find(v=>v.lang.startsWith("en"));
-    if(pref) utt.voice = pref;
-    utt.onstart = ()=>{ if(this.onUpdate) this.onUpdate(this.currentIdx); };
-    utt.onend = ()=>{ this.currentIdx++; this._next(); };
-    utt.onerror = ()=>{ this.currentIdx++; this._next(); };
-    window.speechSynthesis.speak(utt);
-  },
-
-  stop(){
-    window.speechSynthesis.cancel();
-    this.speaking = false;
-    this.queue = [];
-    this.currentIdx = 0;
-    if(this.onUpdate) this.onUpdate(-1);
-    this.onUpdate = null;
-  },
-
-  toggle(segments, onUpdate){
-    if(this.speaking){ this.stop(); }
-    else { this.speak(segments, onUpdate); }
-  }
-};
-
-// Stop TTS when switching tabs
-const _origSwitchTab = switchTab;
-function switchTab(v){
-  TTS.stop();
-  _origSwitchTab(v);
-}
-
-function ttsBtn(id){
-  return `<button class="tts-btn" id="${id}" title="Read aloud">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-    </svg>
-    Listen
-  </button>`;
-}
-
-function ttsBtnStop(){
-  return `<button class="tts-btn playing" title="Stop reading">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="6" y="6" width="12" height="12" rx="1"/>
-    </svg>
-    Stop
-  </button>`;
-}
 
 // ─────────────────────────────────────────────
 // DARK MODE TOGGLE

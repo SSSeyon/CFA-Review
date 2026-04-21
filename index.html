@@ -237,6 +237,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
 .step-btn{width:26px;height:26px;border-radius:50%;border:1px solid var(--border2);background:var(--s2);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--t);line-height:1}
 .step-btn:hover{background:var(--s3);border-color:var(--gbord)}
 .step-val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--gl);min-width:20px;text-align:center}
+.tts-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--s2);color:var(--td);cursor:pointer;font-size:11px;font-family:'Outfit',sans-serif;font-weight:500;transition:all var(--t);white-space:nowrap;flex-shrink:0;line-height:1}
+.tts-btn:hover{border-color:var(--gbord);color:var(--gl);background:var(--gdim)}
+.tts-btn.tts-playing{border-color:var(--gold);color:var(--gold);background:var(--gdim)}
+.tts-btn svg{width:13px;height:13px;flex-shrink:0}
+.tts-pip{width:5px;height:5px;border-radius:50%;background:var(--tf);transition:background .2s;flex-shrink:0}
+.tts-pip.tts-active{background:var(--gold)}
 #toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--s2);border:1px solid var(--border2);border-radius:var(--rs);padding:7px 14px;font-size:12px;color:var(--text);opacity:0;transition:all .2s ease;pointer-events:none;z-index:200;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.5)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
@@ -506,7 +512,7 @@ import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/fir
 // ─────────────────────────────────────────────
 // APP VERSION & FIREBASE
 // ─────────────────────────────────────────────
-const APP_VERSION = "1.1.1";
+const APP_VERSION = "1.1.2";
 document.getElementById("app-ver").textContent = APP_VERSION;
 
 const fbApp = initializeApp({
@@ -2241,6 +2247,173 @@ async function init(){
   if(IS_PREVIEW) toast("👁 Preview mode — data not synced to Firebase", 4000);
 }
 init();
+
+
+// ─────────────────────────────────────────────
+// TEXT-TO-SPEECH — self-contained, isolated from app logic
+// ─────────────────────────────────────────────
+try {
+  if("speechSynthesis" in window){
+
+    let ttsActive = false;
+    let ttsQueue = [];
+    let ttsIdx = 0;
+    let ttsOnTick = null;
+
+    function ttsClean(text){
+      return (text||"")
+        .replace(/[x{00D7}x{00F7}x{2248}x{2265}x{2264}x{2211}x{222B}x{221A}x{03C3}x{03B2}x{03B1}x{03C0}x{03C1}x{03A3}x{0394}x{2192}x{2190}]/gu," ")
+        .replace(/[_*`~#]/g,"")
+        .replace(/\s{2,}/g," ")
+        .trim();
+    }
+
+    function ttsNext(){
+      if(ttsIdx >= ttsQueue.length){
+        ttsActive=false;
+        if(ttsOnTick) ttsOnTick(-1);
+        return;
+      }
+      const utt=new SpeechSynthesisUtterance(ttsClean(ttsQueue[ttsIdx]));
+      utt.rate=0.92; utt.pitch=1; utt.lang="en-GB";
+      const voices=window.speechSynthesis.getVoices();
+      const v=voices.find(v=>v.lang.startsWith("en")&&v.localService)||voices.find(v=>v.lang.startsWith("en"));
+      if(v) utt.voice=v;
+      const ci=ttsIdx;
+      utt.onstart=()=>{ if(ttsOnTick) ttsOnTick(ci); };
+      utt.onend=()=>{ ttsIdx++; ttsNext(); };
+      utt.onerror=()=>{ ttsIdx++; ttsNext(); };
+      window.speechSynthesis.speak(utt);
+    }
+
+    function ttsSpeak(segs, onTick){
+      ttsStop();
+      ttsQueue=(segs||[]).filter(s=>s&&s.trim());
+      ttsIdx=0; ttsActive=true; ttsOnTick=onTick||null;
+      if(window.speechSynthesis.getVoices().length===0){
+        window.speechSynthesis.onvoiceschanged=()=>{ ttsNext(); };
+      } else { ttsNext(); }
+    }
+
+    function ttsStop(){
+      window.speechSynthesis.cancel();
+      ttsActive=false; ttsQueue=[]; ttsIdx=0;
+      if(ttsOnTick) ttsOnTick(-1);
+      ttsOnTick=null;
+    }
+
+    // Stop TTS on tab switch using capture phase — no function redefinition needed
+    document.querySelectorAll(".nb").forEach(btn=>{
+      btn.addEventListener("click",()=>ttsStop(),true);
+    });
+
+    function makeTtsBtn(id){
+      const b=document.createElement("button");
+      b.className="tts-btn"; b.id=id;
+      b.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg> Listen`;
+      return b;
+    }
+
+    function setTtsState(btn, playing){
+      if(!btn) return;
+      if(playing){
+        btn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="1"/></svg> Stop`;
+        btn.classList.add("tts-playing");
+      } else {
+        btn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg> Listen`;
+        btn.classList.remove("tts-playing");
+      }
+    }
+
+    // TODAY tab — inject button after concept loads
+    new MutationObserver(()=>{
+      const out=document.getElementById("today-out");
+      if(!out||!out.children.length||out.querySelector("#tts-today")) return;
+      const hero=out.querySelector(".hero");
+      if(!hero) return;
+      const b=makeTtsBtn("tts-today");
+      b.style.marginTop="10px";
+      hero.appendChild(b);
+      b.addEventListener("click",()=>{
+        if(ttsActive){ ttsStop(); setTtsState(b,false); return; }
+        const segs=[
+          (out.querySelector(".hero-title")||{}).textContent||"",
+          (out.querySelector(".hero-body")||{}).textContent||"",
+          "Key takeaway: "+((out.querySelector(".cb[style*='italic']")||{}).textContent||"").replace(/"/g,"")
+        ].filter(Boolean);
+        setTtsState(b,true);
+        ttsSpeak(segs,(idx)=>{ if(idx===-1) setTtsState(document.getElementById("tts-today"),false); });
+      });
+    }).observe(document.getElementById("today-out"),{childList:true});
+
+    // FLASHCARD — inject buttons when card renders
+    const flOut=document.getElementById("fl-card-out");
+    if(flOut) new MutationObserver(()=>{
+      if(flOut.querySelector("#tts-fl-front")) return;
+      const front=flOut.querySelector(".fc-q");
+      const back=flOut.querySelector(".fc-a");
+      if(front){
+        const b=makeTtsBtn("tts-fl-front"); b.style.marginTop="8px";
+        front.after(b);
+        b.addEventListener("click",(e)=>{
+          e.stopPropagation();
+          if(ttsActive){ ttsStop(); setTtsState(b,false); return; }
+          setTtsState(b,true);
+          ttsSpeak([front.textContent],(idx)=>{ if(idx===-1) setTtsState(document.getElementById("tts-fl-front"),false); });
+        });
+      }
+      if(back){
+        const b=makeTtsBtn("tts-fl-back"); b.style.marginTop="8px";
+        back.after(b);
+        b.addEventListener("click",(e)=>{
+          e.stopPropagation();
+          if(ttsActive){ ttsStop(); setTtsState(b,false); return; }
+          setTtsState(b,true);
+          ttsSpeak([back.textContent],(idx)=>{ if(idx===-1) setTtsState(document.getElementById("tts-fl-back"),false); });
+        });
+      }
+    }).observe(flOut,{childList:true,subtree:true});
+
+    // NOTES — inject button + pips when note opens
+    const noteDet=document.getElementById("notes-detail-out");
+    if(noteDet) new MutationObserver(()=>{
+      if(!noteDet.children.length||noteDet.querySelector("#tts-note-btn")) return;
+      const segs=[];
+      const title=noteDet.querySelector(".note-title");
+      if(title) segs.push(title.textContent);
+      noteDet.querySelectorAll(".note-section").forEach(sec=>{
+        const h=sec.querySelector(".note-section-heading");
+        const b=sec.querySelector(".note-section-body");
+        if(h&&b) segs.push(h.textContent+". "+b.textContent);
+        else if(b) segs.push(b.textContent);
+      });
+      const traps=[...noteDet.querySelectorAll(".note-trap-item")].map(t=>t.textContent);
+      if(traps.length) segs.push("Common pitfalls. "+traps.join(". "));
+      const summ=[...noteDet.querySelectorAll(".note-summary-item")].map(s=>s.textContent);
+      if(summ.length) segs.push("Key takeaways. "+summ.join(". "));
+      if(!segs.length) return;
+      const anchor=noteDet.querySelector(".note-subject-tag");
+      if(!anchor) return;
+      const wrap=document.createElement("div");
+      wrap.style.cssText="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap";
+      const btn=makeTtsBtn("tts-note-btn");
+      const pipRow=document.createElement("div");
+      pipRow.id="tts-pip-row"; pipRow.style.cssText="display:none;gap:3px;align-items:center;flex-wrap:wrap";
+      segs.forEach((_,i)=>{ const p=document.createElement("div"); p.className="tts-pip"; p.id="tts-pip-"+i; pipRow.appendChild(p); });
+      wrap.appendChild(btn); wrap.appendChild(pipRow);
+      anchor.after(wrap);
+      btn.addEventListener("click",()=>{
+        if(ttsActive){ ttsStop(); setTtsState(btn,false); pipRow.style.display="none"; return; }
+        setTtsState(btn,true); pipRow.style.display="flex";
+        ttsSpeak(segs,(idx)=>{
+          noteDet.querySelectorAll(".tts-pip").forEach((p,i)=>p.classList.toggle("tts-active",i===idx));
+          if(idx===-1){ setTtsState(document.getElementById("tts-note-btn"),false); pipRow.style.display="none"; }
+        });
+      });
+    }).observe(noteDet,{childList:true});
+
+  }
+} catch(e){ console.warn("TTS init error:",e); }
 
 // ─────────────────────────────────────────────
 // SERVICE WORKER REGISTRATION

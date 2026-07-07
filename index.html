@@ -254,6 +254,40 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
 .fx-name{font-size:12.5px;font-weight:600;color:var(--text)}
 .fx-row .formula{margin:7px 0 0;text-align:left}
 .fx-use{font-size:11px;color:var(--td);line-height:1.5;margin-top:6px}
+/* Apply-it scenario */
+.apply-card{border-left:3px solid var(--blue)}
+.apply-q{font-size:13px;color:var(--text);line-height:1.6;font-weight:500}
+.apply-a{font-size:12.5px;color:var(--td);line-height:1.75;margin-top:9px;padding-top:9px;border-top:1px solid var(--border)}
+/* Related formula chips */
+.rel-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
+.rel-chip{background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:6px 12px;font-size:11.5px;color:var(--td);cursor:pointer;font-family:'Outfit',sans-serif;transition:all var(--t)}
+.rel-chip:hover{border-color:var(--gbord);color:var(--gl);background:var(--gdim)}
+/* Needs-a-refresh chips */
+.refresh-row{display:flex;flex-direction:column;gap:6px}
+.refresh-chip{display:flex;align-items:center;gap:7px;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:9px 12px;font-size:12px;color:var(--text);cursor:pointer;font-family:'Outfit',sans-serif;text-align:left;transition:all var(--t)}
+.refresh-chip::before{content:"↻";color:var(--amber);font-weight:700}
+.refresh-chip:hover{border-color:var(--gbord);background:var(--s3)}
+/* Ask Gemini button */
+.ai-btn{display:inline-flex;align-items:center;gap:6px;margin-top:11px;padding:6px 13px;border-radius:20px;border:1px solid var(--border2);background:var(--s1);color:var(--text);cursor:pointer;font-size:12px;font-family:'Outfit',sans-serif;font-weight:500;transition:all var(--t)}
+.ai-btn:hover{border-color:var(--purple);background:var(--s2)}
+.ai-btn .gem-ic{display:inline-flex;align-items:center}
+/* Gemini modal */
+.gem-overlay{position:fixed;inset:0;background:rgba(5,7,12,.72);backdrop-filter:blur(4px);z-index:300;display:none;align-items:flex-end;justify-content:center}
+.gem-overlay.show{display:flex}
+.gem-sheet{width:100%;max-width:500px;background:var(--s1);border:1px solid var(--border2);border-radius:16px 16px 0 0;max-height:88dvh;display:flex;flex-direction:column;animation:fup .22s ease}
+.gem-head{display:flex;align-items:center;gap:9px;padding:15px 16px 11px;border-bottom:1px solid var(--border)}
+.gem-title{font-family:'Libre Baskerville',serif;font-size:16px;font-weight:700;color:var(--text);flex:1}
+.gem-close{width:28px;height:28px;border-radius:50%;border:1px solid var(--border2);background:var(--s2);color:var(--td);cursor:pointer;font-size:15px;flex-shrink:0}
+.gem-body{padding:14px 16px;overflow-y:auto;flex:1}
+.gem-body::-webkit-scrollbar{width:0}
+.gem-ctx{font-size:11px;color:var(--tf);line-height:1.5;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:9px 11px;margin-bottom:11px}
+.gem-ans{font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap}
+.gem-ans .cb{color:var(--td)}
+.gem-foot{padding:11px 16px 16px;border-top:1px solid var(--border);display:flex;gap:7px;align-items:flex-end}
+.gem-input{flex:1;background:var(--s2);border:1px solid var(--border2);border-radius:var(--rs);padding:10px 12px;font-size:13px;font-family:'Outfit',sans-serif;color:var(--text);outline:none;resize:none;max-height:110px;line-height:1.5}
+.gem-input:focus{border-color:var(--purple)}
+.gem-spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--purple);border-radius:50%;animation:gemspin .7s linear infinite;vertical-align:middle}
+@keyframes gemspin{to{transform:rotate(360deg)}}
 #toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--s2);border:1px solid var(--border2);border-radius:var(--rs);padding:7px 14px;font-size:12px;color:var(--text);opacity:0;transition:all .2s ease;pointer-events:none;z-index:200;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.5)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
@@ -282,10 +316,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
 
     <!-- FLASHCARDS -->
     <div class="view" id="view-flash">
-      <div class="ltabs" id="fltabs">
-        <div class="lt active" data-lv="L1">Level I</div>
-        <div class="lt" data-lv="L2">Level II</div>
-        <div class="lt" data-lv="L3">Level III</div>
+      <div class="ltabs lv-filter" id="fltabs">
+        <div class="lt active" data-lv="all">All levels</div>
+        <div class="lt" data-lv="L1">I</div>
+        <div class="lt" data-lv="L2">II</div>
+        <div class="lt" data-lv="L3">III</div>
       </div>
       <div id="fl-topic-sec">
         <div class="lbl">Choose a subject</div>
@@ -310,10 +345,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
 
     <!-- QUIZ -->
     <div class="view" id="view-quiz">
-      <div class="ltabs" id="qltabs">
-        <div class="lt active" data-lv="L1">Level I</div>
-        <div class="lt" data-lv="L2">Level II</div>
-        <div class="lt" data-lv="L3">Level III</div>
+      <div class="ltabs lv-filter" id="qltabs">
+        <div class="lt active" data-lv="all">All levels</div>
+        <div class="lt" data-lv="L1">I</div>
+        <div class="lt" data-lv="L2">II</div>
+        <div class="lt" data-lv="L3">III</div>
       </div>
       <div id="q-topic-sec">
         <div class="lbl">Choose a subject</div>
@@ -335,11 +371,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
       </div>
       <div class="lbl">Performance Heatmap</div>
       <div class="card" id="tp-card">
-        <div class="ltabs" id="hm-ltabs" style="margin-bottom:10px">
-          <div class="lt active" data-hlv="L1" style="flex:1;text-align:center;cursor:pointer">L1</div>
-          <div class="lt" data-hlv="L2" style="flex:1;text-align:center;cursor:pointer">L2</div>
-          <div class="lt" data-hlv="L3" style="flex:1;text-align:center;cursor:pointer">L3</div>
-        </div>
         <div id="heatmap-out"><div class="cb" style="color:var(--tf)">Complete quizzes to populate.</div></div>
         <div style="display:flex;gap:8px;margin-top:9px;font-size:10px;color:var(--tf)">
           <span>⬜ No data</span><span style="color:var(--red)">🟥 &lt;50%</span><span style="color:var(--amber)">🟨 50–69%</span><span style="color:var(--green)">🟩 70%+</span>
@@ -356,15 +387,16 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
         <div class="lt" data-nm="formulas">∑ Formula Sheet</div>
       </div>
       <div id="notes-subject-sec">
-        <div class="ltabs" id="nltabs">
-          <div class="lt active" data-nlv="L1">Level I</div>
-          <div class="lt" data-nlv="L2">Level II</div>
-          <div class="lt" data-nlv="L3">Level III</div>
+        <div class="ltabs lv-filter" id="nltabs">
+          <div class="lt active" data-nlv="all">All levels</div>
+          <div class="lt" data-nlv="L1">I</div>
+          <div class="lt" data-nlv="L2">II</div>
+          <div class="lt" data-nlv="L3">III</div>
         </div>
         <div class="note-grid" id="notes-grid"></div>
         <div class="note-empty" id="notes-empty" style="display:none">
           <div style="font-size:28px;margin-bottom:9px">📖</div>
-          <div>No study notes yet for this level.</div>
+          <div>No study notes yet.</div>
           <div style="margin-top:6px;font-size:11.5px">Import a notes content pack from the Settings tab.</div>
         </div>
       </div>
@@ -384,13 +416,14 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
     <div class="view" id="view-search">
       <div class="search-wrap">
         <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input class="search-inp" id="search-inp" type="text" placeholder="Search questions and flashcards…" autocomplete="off"/>
+        <input class="search-inp" id="search-inp" type="text" placeholder="Search everything — notes, formulas, cards…" autocomplete="off"/>
       </div>
-      <div style="display:flex;gap:6px;margin-bottom:12px">
+      <div style="display:flex;gap:5px;margin-bottom:12px">
         <div class="lt active" id="sf-all" style="flex:1;text-align:center;cursor:pointer">All</div>
         <div class="lt" id="sf-quiz" style="flex:1;text-align:center;cursor:pointer">Quiz</div>
-        <div class="lt" id="sf-flash" style="flex:1;text-align:center;cursor:pointer">Flashcards</div>
-        <div class="lt" id="sf-bm" style="flex:1;text-align:center;cursor:pointer">★ Saved</div>
+        <div class="lt" id="sf-flash" style="flex:1;text-align:center;cursor:pointer">Cards</div>
+        <div class="lt" id="sf-notes" style="flex:1;text-align:center;cursor:pointer">Notes</div>
+        <div class="lt" id="sf-bm" style="flex:1;text-align:center;cursor:pointer">★</div>
       </div>
       <div class="search-results" id="search-results">
         <div class="cb" style="color:var(--tf);text-align:center;padding:20px 0">Type to search across all content</div>
@@ -412,6 +445,38 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
             <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
           </button>
         </div>
+      </div>
+
+      <div class="lbl">AI Assistant</div>
+      <div class="card">
+        <div class="setting-title" style="margin-bottom:4px">Gemini API Key</div>
+        <div class="setting-sub" style="margin-bottom:9px">Powers the ✦ Ask Gemini buttons. Stored only in this browser — never uploaded or committed. Get a free key at aistudio.google.com/apikey.</div>
+        <div style="display:flex;gap:7px">
+          <input class="search-inp" id="gem-key-input" type="password" placeholder="Paste your key…" autocomplete="off" style="padding-left:12px"/>
+          <button class="btn btn-p btn-sm" id="gem-key-save" style="flex-shrink:0">Save</button>
+        </div>
+        <div id="gem-key-status" style="font-size:11px;color:var(--tf);margin-top:7px"></div>
+      </div>
+
+      <div class="lbl">Reminders</div>
+      <div class="card">
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">Daily Reminder</div>
+            <div class="setting-sub">A gentle nudge to keep your streak alive. Works best with the app installed to your home screen.</div>
+          </div>
+          <button class="btn btn-sm" id="reminder-toggle" style="flex-shrink:0">Off</button>
+        </div>
+        <div class="setting-divider"></div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-title">Reminder Time</div>
+            <div class="setting-sub">When to nudge you each day</div>
+          </div>
+          <input type="time" id="reminder-time" value="08:00" style="background:var(--s2);border:1px solid var(--border2);border-radius:var(--rs);padding:6px 9px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px"/>
+        </div>
+        <div class="setting-divider"></div>
+        <button class="btn btn-g btn-w btn-sm" id="reminder-test">Send a test notification</button>
       </div>
 
       <div class="lbl">Quiz</div>
@@ -525,6 +590,25 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
     </button>
   </div>
 </div>
+
+<div class="gem-overlay" id="gem-overlay">
+  <div class="gem-sheet">
+    <div class="gem-head">
+      <span id="gem-logo"></span>
+      <div class="gem-title">Ask Gemini</div>
+      <button class="gem-close" id="gem-close" aria-label="Close">✕</button>
+    </div>
+    <div class="gem-body">
+      <div class="gem-ctx" id="gem-ctx"></div>
+      <div class="gem-ans" id="gem-ans"><div class="cb" style="color:var(--tf)">Ask a follow-up about this concept, or tap send to get a plain-English explanation.</div></div>
+    </div>
+    <div class="gem-foot">
+      <textarea class="gem-input" id="gem-input" rows="1" placeholder="Ask about this…"></textarea>
+      <button class="btn btn-p" id="gem-send" style="flex-shrink:0">Send</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script type="module">
@@ -534,8 +618,11 @@ import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/fir
 // ─────────────────────────────────────────────
 // APP VERSION & FIREBASE
 // ─────────────────────────────────────────────
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.3.0";
 document.getElementById("app-ver").textContent = APP_VERSION;
+
+// Gemini "spark" mark — four-point concave star with the Gemini gradient
+const GEMINI_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><defs><linearGradient id="gemgrad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4285F4"/><stop offset="0.45" stop-color="#9B72CB"/><stop offset="0.85" stop-color="#D96570"/><stop offset="1" stop-color="#F9AB55"/></linearGradient></defs><path fill="url(#gemgrad)" d="M12 1c.4 5.4 4.6 9.6 10 10-5.4.4-9.6 4.6-10 10-.4-5.4-4.6-9.6-10-10 5.4-.4 9.6-4.6 10-10Z"/></svg>`;
 
 const fbApp = initializeApp({
   apiKey:"AIzaSyAfxfEp8LT-f_zqiRr1Mbj7RghsxulNboY",
@@ -588,6 +675,48 @@ const SUBJECTS = {
     "Private Wealth"
   ]
 };
+
+// Ordered union of every subject across levels — the app is now subject-first,
+// with CFA level demoted from a required filter to an optional tag.
+const ALL_SUBJECTS = (()=>{
+  const order = ["Ethics & Professional Standards","Quantitative Methods","Economics","Financial Statement Analysis","Corporate Finance","Equity Investments","Fixed Income","Derivatives & Risk Management","Alternative Investments","Portfolio Construction","Portfolio Management","Asset Allocation","Performance Measurement","Private Markets","Private Wealth"];
+  const seen = new Set(); const out = [];
+  order.concat(SUBJECTS.L1, SUBJECTS.L2, SUBJECTS.L3).forEach(s=>{ if(!seen.has(s)){ seen.add(s); out.push(s); } });
+  return out;
+})();
+const LV_LABEL = {L1:"I", L2:"II", L3:"III"};
+function levelsForFilter(f){ return (!f || f==="all") ? ["L1","L2","L3"] : [f]; }
+// Aggregate flashcards for a subject across the levels allowed by the filter,
+// tagging each card with its source level (_lv) for display + jumps.
+function subjectCards(subject, filter){
+  const out = [];
+  levelsForFilter(filter).forEach(lv=>{
+    (CONTENT.flashcards[lv]?.[subject]||[]).forEach(c=>out.push({...c, _lv:lv, _subj:subject}));
+  });
+  return out;
+}
+function subjectDueCards(subject, filter){
+  const today = Math.floor(Date.now()/86400000);
+  return subjectCards(subject, filter).filter(c=>{ const s=(state.srsData||{})[c.id]; return !s || s.due<=today; });
+}
+function subjectQuestions(subject, filter){
+  const out = [];
+  levelsForFilter(filter).forEach(lv=>{
+    (CONTENT.quizQuestions[lv]?.[subject]||[]).forEach(q=>out.push({...q, _lv:lv, _subj:subject}));
+  });
+  return out;
+}
+// Every (subject, level, note) that exists, filtered by the level filter.
+function subjectNotes(filter){
+  const out = [];
+  ALL_SUBJECTS.forEach(subj=>{
+    levelsForFilter(filter).forEach(lv=>{
+      const note = (CONTENT.studyNotes[lv]||{})[subj];
+      if(note) out.push({subj, lv, note});
+    });
+  });
+  return out;
+}
 
 // ─────────────────────────────────────────────
 // FORMULA SHEET — curated quick-reference bank
@@ -654,6 +783,29 @@ const FORMULA_BANK = [
   {s:"Portfolio Construction",n:"Roy's Safety-First Ratio",f:"SFRatio = (E(Rp) − R_L) / σp",u:"Pick the portfolio least likely to breach the minimum return R_L."},
   {s:"Portfolio Management",n:"Fundamental Law of Active Management",f:"IR = IC × √Breadth",u:"Modest skill across many independent bets beats concentrated skill."}
 ];
+
+// ─────────────────────────────────────────────
+// APPLY-IT SCENARIOS — retention beats recall.
+// One desk/client scenario per subject, framed the way the knowledge
+// actually shows up on the job rather than as an exam prompt.
+// ─────────────────────────────────────────────
+const SCENARIO_BANK = {
+  "Ethics & Professional Standards":{q:"A colleague shares a 'great tip' they heard from a company insider. What do you do?",a:"Material non-public information — you can't trade or pass it on. Mosaic theory only covers combining non-material pieces with public data. Document and escalate rather than act."},
+  "Quantitative Methods":{q:"A manager shows a backtest with a t-stat of 1.4 and a beautiful equity curve. Buy it?",a:"A t-stat of 1.4 isn't significant (need ~2). The curve is likely in-sample overfitting. Ask for out-of-sample results and the number of independent bets behind it."},
+  "Economics":{q:"The central bank surprises with a rate hike. What moves on your desk first?",a:"Discount rates rise → long-duration bonds and high-multiple equities fall hardest; the currency tends to strengthen on the rate differential. Reprice duration and FX exposure before earnings assumptions."},
+  "Financial Statement Analysis":{q:"Two firms both report 20% ROE. Which is the safer holding?",a:"Decompose with DuPont. Margin/turnover-driven ROE is durable; leverage-driven ROE is fragile and rate-sensitive. Same headline number, very different risk."},
+  "Corporate Finance":{q:"A project shows a 9% IRR. Green-light it?",a:"Only if 9% clears the WACC (the hurdle). Above WACC creates value, below destroys it. Also check whether NPV is positive — IRR misranks mutually-exclusive projects."},
+  "Equity Investments":{q:"A stock trades at a 40x P/E. Overvalued?",a:"Not necessarily — justified P/E = payout/(r−g), so a high multiple can be fair if growth is high and durable. Compare to peers and to the growth the price implies."},
+  "Fixed Income":{q:"You expect rates to fall 50bp. Which bond gains most?",a:"The longest-duration, highest-convexity bond: ΔP/P ≈ −Dur×Δy + ½·Convexity·Δy². Convexity adds an extra kicker on large moves and helps in both directions."},
+  "Derivatives & Risk Management":{q:"You want to cut equity beta for a month without selling the book. How?",a:"Short index futures: contracts = (target β − current β)×Value/(Futures×Multiplier). Faster and cheaper than trading the underlying, and easily reversed."},
+  "Alternative Investments":{q:"A commodity fund keeps 'bleeding' despite flat spot prices. Why?",a:"Negative roll yield in contango — rolling futures forward at higher prices. Total return = spot + roll + collateral, and roll can dominate a flat market."},
+  "Portfolio Construction":{q:"A sleeve has a great Sharpe but a mediocre Treynor. What does that tell you?",a:"It's efficient on total risk but not on market risk — likely carrying diversifiable risk. In a diversified whole, judge a sleeve on Treynor/beta, not standalone Sharpe."},
+  "Portfolio Management":{q:"Two managers have equal skill. One runs 5 bets, one runs 50. Who wins?",a:"IR = IC × √Breadth — the manager with more independent bets. Breadth multiplies modest skill; concentration wastes it."},
+  "Asset Allocation":{q:"Your optimizer keeps spitting out 60% in one exotic asset. Trust it?",a:"No — MVO is garbage-in, garbage-out and hypersensitive to return inputs. Use Black-Litterman, resampling, or constraints before you act on a corner solution."},
+  "Performance Measurement":{q:"A client says 'my return was 4% but you reported 9%.' Who's right?",a:"Both — you reported time-weighted (manager skill), they feel money-weighted (their cash-flow timing). Explain which question each answers."},
+  "Private Markets":{q:"A 2-year-old PE fund shows a −8% IRR. Panic?",a:"No — that's the J-curve: fees and calls hit before exits. Early-vintage IRR is meaningless; judge only after the fund has had time to harvest."},
+  "Private Wealth":{q:"A client holds REITs in their taxable account and index funds in their IRA. Fix it?",a:"Yes — asset location is backwards. REITs/high-yield throw off ordinary income and belong in tax-advantaged accounts; tax-efficient equities belong in taxable."}
+};
 
 // ─────────────────────────────────────────────
 // BASE CONTENT BANK
@@ -1134,14 +1286,15 @@ let state = {
   quizzesDone:0, totalQ:0, correctQ:0,
   cardsReviewed:0, topicsProgress:{},
   activityLog:[], conceptIdx:0, conceptDate:null,
-  versionLog:[], srsData:{}, bookmarks:[]
+  versionLog:[], srsData:{}, bookmarks:[],
+  subjectSeen:{}, lastFreezeDate:null
 };
 
 // Runtime content store — base + imports merged
 let CONTENT = JSON.parse(JSON.stringify(BASE_CONTENT));
 CONTENT.studyNotes = {}; // { L1: { "Subject": noteObj }, L2: {...}, L3: {...} }
 
-let flLevel="L1", qLevel="L1";
+let flFilter="all", qFilter="all", notesFilter="all"; // level filters: all | L1 | L2 | L3
 let flTopics=new Set(), qTopics=new Set();
 let flCards=[], flIdx=0;
 let flMode="topics", flSessionLabel="";
@@ -1241,14 +1394,41 @@ function markActiveToday(){
   // Streak incremented only when a quiz or flashcard deck is completed
 }
 
+function dayNum(dateStr){ return dateStr ? Math.floor(Date.parse(dateStr+"T00:00:00")/86400000) : null; }
+
 function markStudyToday(){
   const today = new Date().toISOString().split("T")[0];
   if(state.lastStudyDate===today) return; // already counted today
-  const yesterday = new Date(Date.now()-86400000).toISOString().split("T")[0];
-  state.streak = state.lastStudyDate===yesterday ? (state.streak||0)+1 : 1;
+  const tNum = dayNum(today);
+  const lastNum = dayNum(state.lastStudyDate);
+  const freezeNum = dayNum(state.lastFreezeDate);
+  let usedFreeze = false;
+  if(lastNum===null){
+    state.streak = 1;
+  } else {
+    const gap = tNum - lastNum;
+    if(gap===1){
+      state.streak = (state.streak||0)+1;
+    } else if(gap===2 && (freezeNum===null || tNum-freezeNum>=7)){
+      // Streak forgiveness: one free grace day per 7 days bridges a single miss
+      state.streak = (state.streak||0)+1;
+      state.lastFreezeDate = today;
+      usedFreeze = true;
+    } else {
+      state.streak = 1;
+    }
+  }
   state.lastStudyDate = today;
   state.lastActiveDate = today;
   saveState(); updateStreakUI();
+  if(usedFreeze) toast(`🧊 Streak freeze used — your ${state.streak}-day streak is safe`);
+}
+
+// Record that a subject was reviewed today (drives the 'Needs a refresh' module)
+function touchSubject(subject){
+  if(!subject) return;
+  if(!state.subjectSeen) state.subjectSeen = {};
+  state.subjectSeen[subject] = Math.floor(Date.now()/86400000);
 }
 
 function updateStreakUI(){
@@ -1313,6 +1493,9 @@ function loadToday(){
   const tAns=tIndices.indexOf(rQ.ans);
 
   const dueN = getSrsDueCards().length;
+  const scenario = SCENARIO_BANK[c.subject];
+  const related = FORMULA_BANK.filter(f=>f.s===c.subject && f.f!==c.formula).slice(0,3);
+  const stale = getStaleSubjects(3);
 
   document.getElementById("today-out").innerHTML = `
     <div class="card" style="padding:12px 15px">
@@ -1332,11 +1515,24 @@ function loadToday(){
       </div>
       <div class="hero-body">${c.explanation}</div>
       ${c.formula?`<div class="formula">${c.formula}</div>`:""}
+      <button class="ai-btn" id="gem-today"><span class="gem-ic">${GEMINI_SVG}</span>Ask Gemini</button>
     </div>
     <div class="lbl">Key Takeaway</div>
     <div class="card" style="border-left:3px solid var(--gold)">
       <div class="cb" style="font-style:italic;color:var(--text)">"${c.keyTakeaway}"</div>
     </div>
+    ${scenario?`
+    <div class="lbl">Apply It On The Job</div>
+    <div class="card apply-card">
+      <div class="apply-q">${scenario.q}</div>
+      <div class="apply-a" id="apply-a" style="display:none">${scenario.a}</div>
+      <button class="btn btn-g btn-sm" id="apply-reveal" style="margin-top:10px">Reveal how a pro reads it</button>
+    </div>`:""}
+    ${related.length?`
+    <div class="lbl">Related Formulas</div>
+    <div class="rel-row" id="rel-row">
+      ${related.map(f=>`<button class="rel-chip" data-q="${f.n}">${f.n}</button>`).join("")}
+    </div>`:""}
     <div class="lbl">Quick Practice</div>
     <div class="card">
       <div class="cb" style="color:var(--text);margin-bottom:11px">${rQ.q}</div>
@@ -1350,15 +1546,46 @@ function loadToday(){
       <button class="btn btn-p" style="flex:1.4" id="qa-review">${dueN>0?`⚡ Review ${dueN} due card${dueN>1?"s":""}`:"🎲 Daily mix · 10 cards"}</button>
       <button class="btn btn-g" style="flex:1" id="qa-fx">∑ Formulas</button>
     </div>
+    ${stale.length?`
+    <div class="lbl">Needs A Refresh</div>
+    <div class="card" style="padding:12px 13px">
+      <div class="cb" style="color:var(--td);margin-bottom:9px;font-size:12px">Subjects you haven't opened in a while — one tap to keep them sharp.</div>
+      <div class="refresh-row" id="refresh-row">
+        ${stale.map(s=>`<button class="refresh-chip" data-subj="${s}">${s}</button>`).join("")}
+      </div>
+    </div>`:""}
   `;
 
   markRitual("concept");
   renderRitual();
+  touchSubject(c.subject);
 
   document.getElementById("qa-review").addEventListener("click",startSmartReview);
   document.getElementById("qa-fx").addEventListener("click",()=>{
     switchTab("notes");
     showNotesMode("formulas");
+  });
+  document.getElementById("gem-today").addEventListener("click",()=>{
+    askGemini(`Concept: ${c.concept} (${c.subject}, ${c.level}).\n${c.explanation}\nKey takeaway: ${c.keyTakeaway}`, `Explain "${c.concept}" simply, then give one practical example of how it's used on the job.`);
+  });
+  const applyReveal = document.getElementById("apply-reveal");
+  if(applyReveal) applyReveal.addEventListener("click",()=>{
+    document.getElementById("apply-a").style.display="block";
+    applyReveal.style.display="none";
+  });
+  document.querySelectorAll("#rel-row .rel-chip").forEach(ch=>{
+    ch.addEventListener("click",()=>{
+      switchTab("notes");
+      showNotesMode("formulas");
+      const inp=document.getElementById("fx-search");
+      inp.value=ch.dataset.q; renderFormulas(ch.dataset.q);
+    });
+  });
+  document.querySelectorAll("#refresh-row .refresh-chip").forEach(ch=>{
+    ch.addEventListener("click",()=>{
+      const subj=ch.dataset.subj;
+      startMixedSession(shuffleArr(subjectCards(subj,"all")).slice(0,15), subj);
+    });
   });
 
   document.querySelectorAll("#today-opts .qopt").forEach(opt=>{
@@ -1415,7 +1642,7 @@ function renderRitual(){
 // ─────────────────────────────────────────────
 function getAllFlashcards(){
   const all=[];
-  ["L1","L2","L3"].forEach(lv=>Object.values(CONTENT.flashcards[lv]||{}).forEach(arr=>all.push(...arr)));
+  ["L1","L2","L3"].forEach(lv=>Object.entries(CONTENT.flashcards[lv]||{}).forEach(([subj,arr])=>arr.forEach(c=>all.push({...c, _lv:lv, _subj:subj}))));
   return all;
 }
 
@@ -1425,6 +1652,17 @@ function getSrsDueCards(){
     const s=(state.srsData||{})[c.id];
     return s && s.due <= today;
   });
+}
+
+function subjectsWithCards(){ return ALL_SUBJECTS.filter(s=>subjectCards(s,"all").length>0); }
+// Stalest subjects first (never-opened rank before long-ago-opened)
+function getStaleSubjects(n){
+  const seen = state.subjectSeen||{};
+  return subjectsWithCards()
+    .map(s=>({s, t: seen[s]==null ? -1 : seen[s]}))
+    .sort((a,b)=>a.t-b.t)
+    .slice(0,n)
+    .map(x=>x.s);
 }
 
 function shuffleArr(a){
@@ -1454,16 +1692,14 @@ function buildFlTopics(){
   const grid=document.getElementById("fl-topics");
   grid.innerHTML=""; flTopics=new Set();
   document.getElementById("fl-start").disabled=true;
-  SUBJECTS[flLevel].forEach(t=>{
+  ALL_SUBJECTS.forEach(t=>{
+    const total = subjectCards(t, flFilter).length;
+    if(total===0) return; // subject-first: hide subjects with no cards at this level
+    const due = subjectDueCards(t, flFilter).length;
     const chip=document.createElement("div");
-    const due = getDueCards(flLevel,t).length;
-    const total = (CONTENT.flashcards[flLevel][t]||[]).length;
     chip.className="tchip";
     chip.innerHTML = t + (due>0?` <span class="due-badge">${due} due</span>`:"");
-    const hasCards = total > 0;
-    if(!hasCards) chip.style.opacity="0.4";
     chip.addEventListener("click",()=>{
-      if(!hasCards){ toast("No flashcards yet — import a content pack"); return; }
       if(flTopics.has(t)){ flTopics.delete(t); chip.classList.remove("sel"); }
       else { flTopics.add(t); chip.classList.add("sel"); }
       document.getElementById("fl-start").disabled=flTopics.size===0;
@@ -1472,14 +1708,17 @@ function buildFlTopics(){
     });
     grid.appendChild(chip);
   });
+  if(!grid.children.length){
+    grid.innerHTML=`<div class="cb" style="color:var(--tf);grid-column:1/-1;text-align:center;padding:16px 0">No flashcards at this level yet.</div>`;
+  }
 }
 
 document.querySelectorAll("#fltabs .lt").forEach(tab=>{
   tab.addEventListener("click",()=>{
-    // Ignore tab clicks while a session is active
+    // Ignore filter clicks while a session is active
     if(document.getElementById("fl-card-sec").style.display==="block") return;
     document.querySelectorAll("#fltabs .lt").forEach(t=>t.classList.remove("active"));
-    tab.classList.add("active"); flLevel=tab.dataset.lv; buildFlTopics();
+    tab.classList.add("active"); flFilter=tab.dataset.lv; buildFlTopics();
   });
 });
 
@@ -1506,7 +1745,7 @@ function startFlash(){
   if(flTopics.size===0) return;
   const today = Math.floor(Date.now()/86400000);
   let all = [];
-  flTopics.forEach(t=>{ all = all.concat(CONTENT.flashcards[flLevel][t]||[]); });
+  flTopics.forEach(t=>{ all = all.concat(subjectCards(t, flFilter)); });
   // Sort: due cards first, then by due date ascending
   all.sort((a,b)=>{
     const sa=(state.srsData||{})[a.id]||{due:0};
@@ -1539,7 +1778,7 @@ function renderFlCard(){
       <div class="fc" id="fcinner">
         <div class="fcf fc-front">
           <div style="display:flex;justify-content:space-between;width:100%;margin-bottom:8px">
-            <div class="fc-hint">Tap to reveal</div>
+            <div class="fc-hint">Tap to reveal${card._lv?` · ${card._subj||""} · Level ${LV_LABEL[card._lv]}`:""}</div>
             <button class="bm-btn${isBm?" active":""}" id="bm-fl" title="Bookmark">
               <svg viewBox="0 0 24 24" fill="${isBm?"currentColor":"none"}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
             </button>
@@ -1554,7 +1793,11 @@ function renderFlCard(){
       <button class="rb rm" data-r="medium">~ OK</button>
       <button class="rb rh" data-r="hard">✗ Hard</button>
     </div>
+    <div style="text-align:center;margin-bottom:11px"><button class="ai-btn" id="gem-fl"><span class="gem-ic">${GEMINI_SVG}</span>Ask Gemini about this</button></div>
   `;
+  document.getElementById("gem-fl").addEventListener("click",()=>{
+    askGemini(`Flashcard (${card._subj||""}${card._lv?", Level "+LV_LABEL[card._lv]:""}).\nFront: ${card.front}\nBack: ${card.back}`, `Explain this flashcard in plain English and give a quick example.`);
+  });
   document.getElementById("bm-fl").addEventListener("click",(e)=>{
     e.stopPropagation();
     toggleBookmark(card.id);
@@ -1609,10 +1852,11 @@ function renderFlCard(){
       srs.due = today + srs.interval;
       state.srsData[card.id] = srs;
       state.cardsReviewed=(state.cardsReviewed||0)+1;
+      touchSubject(card._subj);
       if(flIdx<flCards.length-1){ flIdx++; renderFlCard(); }
       else {
         const smart = flMode==="smart";
-        const dueCount = smart ? getSrsDueCards().length : [...flTopics].reduce((s,t)=>s+getDueCards(flLevel,t).length,0);
+        const dueCount = smart ? getSrsDueCards().length : [...flTopics].reduce((s,t)=>s+subjectDueCards(t,flFilter).length,0);
         const flTopicLabel = smart ? flSessionLabel : [...flTopics].join(", ");
         document.getElementById("fl-card-out").innerHTML=`
           <div class="card" style="text-align:center;padding:26px 16px">
@@ -1625,7 +1869,7 @@ function renderFlCard(){
               <button class="btn btn-p" style="flex:1" id="fl-newtopic">${smart?"Done":"New Subject"}</button>
             </div>
           </div>`;
-        logActivity("flash",flTopicLabel,smart?"Mixed":flLevel);
+        logActivity("flash",flTopicLabel,smart?"Mixed":(flFilter==="all"?"All levels":"Level "+LV_LABEL[flFilter]));
         markStudyToday();
         markRitual("review");
         saveState();
@@ -1647,13 +1891,12 @@ function buildQTopics(){
   const grid=document.getElementById("q-topics");
   grid.innerHTML=""; qTopics=new Set();
   document.getElementById("q-start").disabled=true;
-  SUBJECTS[qLevel].forEach(t=>{
+  ALL_SUBJECTS.forEach(t=>{
+    const total = subjectQuestions(t, qFilter).length;
+    if(total===0) return;
     const chip=document.createElement("div");
     chip.className="tchip"; chip.textContent=t;
-    const hasQs = (CONTENT.quizQuestions[qLevel][t]||[]).length > 0;
-    if(!hasQs) chip.style.opacity="0.4";
     chip.addEventListener("click",()=>{
-      if(!hasQs){ toast("No questions yet — import a content pack"); return; }
       if(qTopics.has(t)){ qTopics.delete(t); chip.classList.remove("sel"); }
       else { qTopics.add(t); chip.classList.add("sel"); }
       document.getElementById("q-start").disabled=qTopics.size===0;
@@ -1662,14 +1905,17 @@ function buildQTopics(){
     });
     grid.appendChild(chip);
   });
+  if(!grid.children.length){
+    grid.innerHTML=`<div class="cb" style="color:var(--tf);grid-column:1/-1;text-align:center;padding:16px 0">No questions at this level yet.</div>`;
+  }
 }
 
 document.querySelectorAll("#qltabs .lt").forEach(tab=>{
   tab.addEventListener("click",()=>{
-    // Ignore tab clicks while a session is active
+    // Ignore filter clicks while a session is active
     if(document.getElementById("q-session-sec").style.display==="block") return;
     document.querySelectorAll("#qltabs .lt").forEach(t=>t.classList.remove("active"));
-    tab.classList.add("active"); qLevel=tab.dataset.lv; buildQTopics();
+    tab.classList.add("active"); qFilter=tab.dataset.lv; buildQTopics();
   });
 });
 
@@ -1678,7 +1924,7 @@ document.getElementById("q-start").addEventListener("click",startQuiz);
 function startQuiz(){
   if(qTopics.size===0) return;
   let pool=[];
-  qTopics.forEach(t=>{ pool=pool.concat(CONTENT.quizQuestions[qLevel][t]||[]); });
+  qTopics.forEach(t=>{ pool=pool.concat(subjectQuestions(t, qFilter)); });
   if(!pool.length){ toast("No questions for these subjects yet"); return; }
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
   // Shuffle answer options and update correct answer index
@@ -1707,6 +1953,7 @@ function renderQuestion(){
         <button class="btn btn-g btn-sm" id="q-exit">🏠</button>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
+        ${q._lv?`<span class="tag">Lvl ${LV_LABEL[q._lv]}</span>`:""}
         <span class="tag gold">${[...qTopics].join(", ").length>25?[...qTopics].length+" subjects":[...qTopics].join(", ")}</span>
         <button class="bm-btn${qIsBm?" active":""}" id="bm-q" title="Bookmark">
           <svg viewBox="0 0 24 24" fill="${qIsBm?"currentColor":"none"}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
@@ -1752,13 +1999,16 @@ function renderResult(){
   state.totalQ=(state.totalQ||0)+total;
   state.correctQ=(state.correctQ||0)+qScore;
   const topicLabel=[...qTopics].join(", ");
-  const key=qTopics.size===1?`${qLevel}-${[...qTopics][0]}`:`${qLevel}-Mixed`;
+  const filterLabel = qFilter==="all"?"All levels":"Level "+LV_LABEL[qFilter];
+  // Subject-first: performance is now tracked per subject, level-agnostic
+  const key=qTopics.size===1?[...qTopics][0]:"Mixed";
   if(!state.topicsProgress) state.topicsProgress={};
   if(!state.topicsProgress[key]) state.topicsProgress[key]={attempts:0,correct:0,total:0};
   state.topicsProgress[key].attempts++;
   state.topicsProgress[key].correct+=qScore;
   state.topicsProgress[key].total+=total;
-  logActivity("quiz",[...qTopics].join(", "),qLevel,`${qScore}/${total}`);
+  [...qTopics].forEach(touchSubject);
+  logActivity("quiz",[...qTopics].join(", "),filterLabel,`${qScore}/${total}`);
   markStudyToday();
   markRitual("review");
   saveState();
@@ -1767,7 +2017,7 @@ function renderResult(){
   document.getElementById("q-out").innerHTML=`
     <div class="card" style="text-align:center">
       <div class="ct" style="margin-bottom:3px">Result ${emoji}</div>
-      <div class="cb" style="margin-bottom:14px">${topicLabel} · ${qLevel}</div>
+      <div class="cb" style="margin-bottom:14px">${topicLabel} · ${filterLabel}</div>
       <div class="srw">
         <div class="sr">
           <svg viewBox="0 0 96 96">
@@ -1794,20 +2044,17 @@ function renderResult(){
 // ─────────────────────────────────────────────
 // PROGRESS
 // ─────────────────────────────────────────────
-let hmLevel = "L1";
 function renderHeatmap(){
   const tp = state.topicsProgress||{};
-  const subjects = SUBJECTS[hmLevel];
-  const cells = subjects.map(s=>{
-    const key = `${hmLevel}-${s}`;
-    const d = tp[key];
-    if(!d||!d.total){ return `<div class="hm-cell hm-0"><div class="hm-label">${s}</div><div class="hm-pct" style="color:var(--tf)">—</div></div>`; }
+  // Subject-first: accuracy is aggregated per subject across all levels
+  const cells = ALL_SUBJECTS.filter(s=>tp[s]&&tp[s].total).map(s=>{
+    const d = tp[s];
     const pct = Math.round((d.correct/d.total)*100);
     const cls = pct>=70?"hm-good":pct>=50?"hm-mid":"hm-low";
     return `<div class="hm-cell ${cls}"><div class="hm-label">${s}</div><div class="hm-pct">${pct}%</div></div>`;
   }).join("");
   const out = document.getElementById("heatmap-out");
-  if(out) out.innerHTML=`<div class="heatmap">${cells}</div>`;
+  if(out) out.innerHTML = cells ? `<div class="heatmap">${cells}</div>` : `<div class="cb" style="color:var(--tf)">Complete quizzes to populate.</div>`;
 }
 
 function updateProgressUI(){
@@ -2141,10 +2388,11 @@ function toggleBookmark(id){
 // SEARCH
 // ─────────────────────────────────────────────
 let searchFilter="all";
-["sf-all","sf-quiz","sf-flash","sf-bm"].forEach(id=>{
-  document.getElementById(id).addEventListener("click",()=>{
+["sf-all","sf-quiz","sf-flash","sf-notes","sf-bm"].forEach(id=>{
+  const el=document.getElementById(id); if(!el) return;
+  el.addEventListener("click",()=>{
     document.querySelectorAll("#view-search .lt").forEach(t=>t.classList.remove("active"));
-    document.getElementById(id).classList.add("active");
+    el.classList.add("active");
     searchFilter=id.replace("sf-","");
     doSearch(document.getElementById("search-inp").value.trim());
   });
@@ -2158,117 +2406,138 @@ function doSearch(query){
   const out=document.getElementById("search-results");
   const bms=state.bookmarks||[];
   const q=query.toLowerCase();
+  const wants=(f)=> searchFilter==="all" || searchFilter===f;
+  const hit=(...fields)=> !q || fields.some(x=>(x||"").toLowerCase().includes(q));
 
   let results=[];
   ["L1","L2","L3"].forEach(lv=>{
     SUBJECTS[lv].forEach(subj=>{
-      if(searchFilter==="flash"||searchFilter==="all"||searchFilter==="bm"){
+      if(wants("flash")||searchFilter==="bm"){
         (CONTENT.flashcards[lv]?.[subj]||[]).forEach(card=>{
           if(searchFilter==="bm"&&!bms.includes(card.id)) return;
-          if(q&&!card.front.toLowerCase().includes(q)&&!card.back.toLowerCase().includes(q)) return;
-          results.push({type:"flashcard",lv,subj,id:card.id,title:card.front,body:card.back});
+          if(!hit(card.front,card.back)) return;
+          results.push({type:"flashcard",lv,subj,id:card.id,title:card.front});
         });
       }
-      if(searchFilter==="quiz"||searchFilter==="all"||searchFilter==="bm"){
+      if(wants("quiz")||searchFilter==="bm"){
         (CONTENT.quizQuestions[lv]?.[subj]||[]).forEach(qq=>{
           if(searchFilter==="bm"&&!bms.includes(qq.id)) return;
-          if(q&&!qq.q.toLowerCase().includes(q)&&!qq.exp.toLowerCase().includes(q)) return;
-          results.push({type:"quiz",lv,subj,id:qq.id,title:qq.q,body:qq.exp});
+          if(!hit(qq.q,qq.exp)) return;
+          results.push({type:"quiz",lv,subj,id:qq.id,title:qq.q});
         });
       }
     });
   });
+  // Study notes
+  if(wants("notes")){
+    subjectNotes("all").forEach(({subj,lv,note})=>{
+      const secText=(note.sections||[]).map(s=>s.heading+" "+s.body).join(" ");
+      if(!hit(note.title,subj,secText)) return;
+      results.push({type:"note",lv,subj,title:note.title||subj,note});
+    });
+  }
+  // Formula sheet
+  if(wants("notes")){
+    FORMULA_BANK.forEach(f=>{
+      if(!hit(f.n,f.f,f.u,f.s)) return;
+      results.push({type:"formula",subj:f.s,title:f.n,fname:f.n});
+    });
+  }
+  // Daily concepts
+  if(wants("notes")){
+    (CONTENT.dailyConcepts||[]).forEach(c=>{
+      if(!hit(c.concept,c.explanation,c.keyTakeaway,c.subject)) return;
+      results.push({type:"concept",lv:(c.level==="Level I"?"L1":c.level==="Level II"?"L2":"L3"),subj:c.subject,title:c.concept});
+    });
+  }
 
   if(!q&&searchFilter==="all"){
-    out.innerHTML=`<div class="cb" style="color:var(--tf);text-align:center;padding:20px 0">Type to search across all content</div>`;
+    out.innerHTML=`<div class="cb" style="color:var(--tf);text-align:center;padding:20px 0">Type to search across notes, formulas, cards and questions</div>`;
     return;
   }
   if(!results.length){
     out.innerHTML=`<div class="cb" style="color:var(--tf);text-align:center;padding:20px 0">No results found</div>`;
     return;
   }
-  const limited=results.slice(0,40);
-  out.innerHTML=limited.map(r=>{
-    const isBm=bms.includes(r.id);
-    const typeTag=r.type==="flashcard"?"Flashcard":"Quiz Q";
-    const typeCol=r.type==="flashcard"?"blue":"gold";
-    return `<div class="sr-item">
+  // Surface reference material (formulas, notes, concepts) above practice items
+  const prio={formula:0,note:1,concept:2,flashcard:3,quiz:4};
+  results.sort((a,b)=>prio[a.type]-prio[b.type]);
+  const meta={flashcard:["Flashcard","blue"],quiz:["Quiz Q","gold"],note:["Note","purple"],formula:["Formula","green"],concept:["Concept","blue"]};
+  const limited=results.slice(0,50);
+  out.innerHTML=limited.map((r,i)=>{
+    const [typeTag,typeCol]=meta[r.type];
+    const canBm = r.type==="flashcard"||r.type==="quiz";
+    const isBm = canBm && bms.includes(r.id);
+    const clickable = r.type==="note"||r.type==="formula"||r.type==="concept";
+    return `<div class="sr-item"${clickable?` data-open="${i}"`:""}>
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <div class="sr-item-q">${r.title}</div>
-        <button class="bm-btn${isBm?" active":""}" data-bmid="${r.id}" title="Bookmark">
+        ${canBm?`<button class="bm-btn${isBm?" active":""}" data-bmid="${r.id}" title="Bookmark">
           <svg viewBox="0 0 24 24" fill="${isBm?"currentColor":"none"}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-        </button>
+        </button>`:""}
       </div>
       <div class="sr-item-meta">
         <span class="tag ${typeCol}">${typeTag}</span>
-        <span class="tag">${r.lv}</span>
+        ${r.lv?`<span class="tag">Lvl ${LV_LABEL[r.lv]}</span>`:""}
         <span class="tag">${r.subj}</span>
       </div>
     </div>`;
   }).join("");
-  if(results.length>40) out.innerHTML+=`<div class="cb" style="color:var(--tf);text-align:center;padding:10px 0;font-size:11px">Showing 40 of ${results.length} results — refine your search</div>`;
+  if(results.length>50) out.innerHTML+=`<div class="cb" style="color:var(--tf);text-align:center;padding:10px 0;font-size:11px">Showing 50 of ${results.length} results — refine your search</div>`;
 
-  // Wire bookmark buttons in results
+  // Wire bookmark buttons
   out.querySelectorAll(".bm-btn[data-bmid]").forEach(btn=>{
-    btn.addEventListener("click",()=>{
+    btn.addEventListener("click",(e)=>{
+      e.stopPropagation();
       toggleBookmark(btn.dataset.bmid);
       doSearch(document.getElementById("search-inp").value.trim());
+    });
+  });
+  // Wire clickable results (open note / formula / concept)
+  out.querySelectorAll(".sr-item[data-open]").forEach(el=>{
+    el.style.cursor="pointer";
+    el.addEventListener("click",()=>{
+      const r=limited[parseInt(el.dataset.open)];
+      if(r.type==="note"){ switchTab("notes"); showNotesMode("notes"); openNote(r.note, r.subj, r.lv); }
+      else if(r.type==="formula"){ switchTab("notes"); showNotesMode("formulas"); const fi=document.getElementById("fx-search"); fi.value=r.fname; renderFormulas(r.fname); }
+      else if(r.type==="concept"){ switchTab("today"); toast("Opened Today — concept rotates daily"); }
     });
   });
 }
 
 // ─────────────────────────────────────────────
-// HEATMAP TAB SWITCHING
-// ─────────────────────────────────────────────
-document.querySelectorAll("#hm-ltabs .lt").forEach(tab=>{
-  tab.addEventListener("click",()=>{
-    document.querySelectorAll("#hm-ltabs .lt").forEach(t=>t.classList.remove("active"));
-    tab.classList.add("active");
-    hmLevel=tab.dataset.hlv;
-    renderHeatmap();
-  });
-});
-
-// ─────────────────────────────────────────────
 // STUDY NOTES
 // ─────────────────────────────────────────────
-let notesLevel = "L1";
-
 function buildNotesGrid(){
-  const subjects = SUBJECTS[notesLevel];
-  const notes = CONTENT.studyNotes[notesLevel]||{};
   const grid = document.getElementById("notes-grid");
   const empty = document.getElementById("notes-empty");
-  const hasAny = Object.keys(notes).length > 0;
+  const items = subjectNotes(notesFilter); // [{subj, lv, note}]
   grid.innerHTML = "";
-  if(!hasAny){
+  if(!items.length){
     grid.style.display="none";
     empty.style.display="block";
     return;
   }
   grid.style.display="grid";
   empty.style.display="none";
-  subjects.forEach(subj=>{
-    const note = notes[subj];
+  items.forEach(({subj, lv, note})=>{
     const chip = document.createElement("div");
-    chip.className = note ? "note-chip has-note" : "note-chip no-note";
+    chip.className = "note-chip has-note";
     chip.innerHTML = `
       <div class="note-chip-title">${subj}</div>
-      <div class="note-chip-meta">${note ? (note.sections||[]).length+" sections" : "No note yet"}</div>
+      <div class="note-chip-meta">${(note.sections||[]).length} sections · Level ${LV_LABEL[lv]}</div>
     `;
-    if(note){
-      chip.addEventListener("click",()=>openNote(note, subj));
-    }
+    chip.addEventListener("click",()=>openNote(note, subj, lv));
     grid.appendChild(chip);
   });
 }
 
-function openNote(note, subj){
+function openNote(note, subj, lv){
   document.getElementById("notes-subject-sec").style.display="none";
   const det = document.getElementById("notes-detail-sec");
   det.style.display="block";
 
-  const lvColour = notesLevel==="L1"?"blue":notesLevel==="L2"?"purple":"gold";
+  const lvColour = lv==="L1"?"blue":lv==="L2"?"purple":"gold";
   const sections = (note.sections||[]).map(s=>`
     <div class="note-section">
       <div class="note-section-heading">${s.heading}</div>
@@ -2297,7 +2566,7 @@ function openNote(note, subj){
       </div>
       <div class="note-title">${note.title||subj}</div>
       <div class="note-subject-tag">
-        <span class="tag ${lvColour}">${notesLevel==="L1"?"Level I":notesLevel==="L2"?"Level II":"Level III"}</span>
+        <span class="tag ${lvColour}">Level ${LV_LABEL[lv]}</span>
         <span class="tag" style="margin-left:4px">${subj}</span>
       </div>
       ${sections}
@@ -2319,21 +2588,19 @@ function openNote(note, subj){
     document.getElementById("notes-subject-sec").style.display="block";
     switchTab("today");
   });
-  // Jump to flashcards for this subject
+  // Jump to flashcards for this subject (drill to the note's level)
   document.getElementById("note-to-flash").addEventListener("click",()=>{
     det.style.display="none";
     document.getElementById("notes-subject-sec").style.display="block";
     switchTab("flash");
-    // Set the correct level tab
-    document.querySelectorAll("#fltabs .lt").forEach(t=>{
-      t.classList.toggle("active", t.dataset.lv===notesLevel);
-    });
-    flLevel=notesLevel; buildFlTopics();
+    flFilter=lv;
+    document.querySelectorAll("#fltabs .lt").forEach(t=>t.classList.toggle("active", t.dataset.lv===lv));
+    buildFlTopics();
     // Auto-select this subject if it has cards
     setTimeout(()=>{
       const chips=[...document.querySelectorAll("#fl-topics .tchip")];
       const match=chips.find(c=>c.textContent.startsWith(subj));
-      if(match&&!(CONTENT.flashcards[notesLevel]?.[subj]||[]).length===0) match.click();
+      if(match) match.click();
     },50);
   });
   // Jump to quiz for this subject
@@ -2341,10 +2608,9 @@ function openNote(note, subj){
     det.style.display="none";
     document.getElementById("notes-subject-sec").style.display="block";
     switchTab("quiz");
-    document.querySelectorAll("#qltabs .lt").forEach(t=>{
-      t.classList.toggle("active", t.dataset.lv===notesLevel);
-    });
-    qLevel=notesLevel; buildQTopics();
+    qFilter=lv;
+    document.querySelectorAll("#qltabs .lt").forEach(t=>t.classList.toggle("active", t.dataset.lv===lv));
+    buildQTopics();
     setTimeout(()=>{
       const chips=[...document.querySelectorAll("#q-topics .tchip")];
       const match=chips.find(c=>c.textContent===subj);
@@ -2352,14 +2618,15 @@ function openNote(note, subj){
     },50);
   });
 
-  logActivity("note",subj,notesLevel==="L1"?"Level I":notesLevel==="L2"?"Level II":"Level III");
+  touchSubject(subj);
+  logActivity("note",subj,"Level "+LV_LABEL[lv]);
 }
 
 document.querySelectorAll("#nltabs .lt").forEach(tab=>{
   tab.addEventListener("click",()=>{
     document.querySelectorAll("#nltabs .lt").forEach(t=>t.classList.remove("active"));
     tab.classList.add("active");
-    notesLevel=tab.dataset.nlv;
+    notesFilter=tab.dataset.nlv;
     document.getElementById("notes-detail-sec").style.display="none";
     document.getElementById("notes-subject-sec").style.display="block";
     buildNotesGrid();
@@ -2462,9 +2729,162 @@ document.getElementById("reset-progress-btn").addEventListener("click",()=>{
   if(!confirm("Reset all progress? This cannot be undone.")) return;
   state.quizzesDone=0; state.totalQ=0; state.correctQ=0;
   state.cardsReviewed=0; state.topicsProgress={}; state.activityLog=[];
-  state.streak=0; state.lastActiveDate=null;
+  state.streak=0; state.lastActiveDate=null; state.subjectSeen={};
   saveState(); updateStreakUI(); updateProgressUI();
   toast("Progress reset");
+});
+
+// ─────────────────────────────────────────────
+// SETTINGS — GEMINI KEY
+// ─────────────────────────────────────────────
+(function(){
+  const inp=document.getElementById("gem-key-input");
+  const status=document.getElementById("gem-key-status");
+  function refresh(){
+    const k=(localStorage.getItem("cfa_gemini_key")||"").trim();
+    status.textContent = k ? `✓ Key saved (ends …${k.slice(-4)})` : "No key saved yet.";
+    inp.placeholder = k ? "•••••••• saved — paste to replace" : "Paste your key…";
+  }
+  document.getElementById("gem-key-save").addEventListener("click",()=>{
+    const v=inp.value.trim();
+    if(!v){ localStorage.removeItem("cfa_gemini_key"); inp.value=""; toast("Key cleared"); refresh(); return; }
+    localStorage.setItem("cfa_gemini_key", v); inp.value=""; toast("✓ Gemini key saved to this device"); refresh();
+  });
+  refresh();
+})();
+
+// ─────────────────────────────────────────────
+// SETTINGS — DAILY REMINDER (best-effort; reliable when installed)
+// ─────────────────────────────────────────────
+const reminderState = {
+  on: localStorage.getItem("cfa_reminder")==="on",
+  time: localStorage.getItem("cfa_reminder_time")||"08:00"
+};
+let reminderTimer=null;
+function renderReminderUI(){
+  const btn=document.getElementById("reminder-toggle");
+  if(!btn) return;
+  btn.textContent = reminderState.on?"On":"Off";
+  btn.style.background = reminderState.on?"rgba(62,207,142,.14)":"var(--s2)";
+  btn.style.color = reminderState.on?"var(--green)":"var(--td)";
+  btn.style.border = "1px solid "+(reminderState.on?"rgba(62,207,142,.3)":"var(--border)");
+  const t=document.getElementById("reminder-time"); if(t) t.value=reminderState.time;
+}
+async function enableNotifications(){
+  if(!("Notification" in window)){ toast("Notifications aren't supported here"); return false; }
+  let perm=Notification.permission;
+  if(perm!=="granted") perm=await Notification.requestPermission();
+  if(perm!=="granted"){ toast("Notification permission denied"); return false; }
+  return true;
+}
+async function fireReminder(){
+  const today=new Date().toISOString().split("T")[0];
+  const body = state.lastStudyDate===today
+    ? "Already refreshed today 🏆 — peek at a due card?"
+    : "Keep your streak alive — a 2-minute refresher is waiting.";
+  try{
+    const reg = navigator.serviceWorker && await navigator.serviceWorker.ready;
+    if(reg && reg.showNotification){ reg.showNotification("CFA Review", {body, icon:"icon-192.png", badge:"icon-192.png", tag:"cfa-daily"}); }
+    else if("Notification" in window){ new Notification("CFA Review",{body}); }
+  }catch(e){ try{ new Notification("CFA Review",{body}); }catch(_){} }
+}
+function scheduleReminder(){
+  if(reminderTimer){ clearTimeout(reminderTimer); reminderTimer=null; }
+  if(!reminderState.on) return;
+  const [h,m]=reminderState.time.split(":").map(Number);
+  const now=new Date();
+  const next=new Date(); next.setHours(h||0, m||0, 0, 0);
+  if(next<=now) next.setDate(next.getDate()+1);
+  reminderTimer=setTimeout(()=>{ fireReminder(); scheduleReminder(); }, next-now);
+}
+const reminderToggleBtn=document.getElementById("reminder-toggle");
+if(reminderToggleBtn) reminderToggleBtn.addEventListener("click",async()=>{
+  if(!reminderState.on){
+    if(!(await enableNotifications())) return;
+    reminderState.on=true; localStorage.setItem("cfa_reminder","on");
+    try{ const reg=navigator.serviceWorker&&await navigator.serviceWorker.ready; if(reg&&reg.periodicSync){ await reg.periodicSync.register("cfa-daily",{minInterval:12*3600*1000}).catch(()=>{}); } }catch(e){}
+    toast("🔔 Daily reminder on");
+  } else {
+    reminderState.on=false; localStorage.setItem("cfa_reminder","off");
+    toast("Reminder off");
+  }
+  renderReminderUI(); scheduleReminder();
+});
+const reminderTimeInp=document.getElementById("reminder-time");
+if(reminderTimeInp) reminderTimeInp.addEventListener("change",e=>{
+  reminderState.time=e.target.value||"08:00"; localStorage.setItem("cfa_reminder_time",reminderState.time);
+  scheduleReminder();
+  if(reminderState.on) toast("Reminder time updated");
+});
+const reminderTestBtn=document.getElementById("reminder-test");
+if(reminderTestBtn) reminderTestBtn.addEventListener("click",async()=>{
+  if(!(await enableNotifications())) return;
+  fireReminder();
+});
+renderReminderUI();
+if(reminderState.on) scheduleReminder();
+
+// ─────────────────────────────────────────────
+// ASK GEMINI — key stored locally (never committed to the repo)
+// ─────────────────────────────────────────────
+document.getElementById("gem-logo").innerHTML = GEMINI_SVG;
+let gemContext = "";
+function getGeminiKey(){ return (localStorage.getItem("cfa_gemini_key")||"").trim(); }
+
+function askGemini(context, presetQuestion){
+  gemContext = context||"";
+  document.getElementById("gem-ctx").textContent = context||"";
+  document.getElementById("gem-input").value = presetQuestion||"";
+  document.getElementById("gem-ans").innerHTML = `<div class="cb" style="color:var(--tf)">Tap Send for a plain-English explanation, or edit the question first.</div>`;
+  document.getElementById("gem-overlay").classList.add("show");
+  setTimeout(()=>document.getElementById("gem-input").focus(),80);
+}
+function closeGemini(){ document.getElementById("gem-overlay").classList.remove("show"); }
+
+async function sendGemini(){
+  const key = getGeminiKey();
+  const ansEl = document.getElementById("gem-ans");
+  if(!key){
+    ansEl.innerHTML = `<div class="cb">No Gemini API key saved yet. Add one under <b>Settings → AI Assistant</b> — it stays on this device only. Get a free key at <span style="color:var(--blue)">aistudio.google.com/apikey</span>.</div>`;
+    return;
+  }
+  const q = document.getElementById("gem-input").value.trim();
+  const prompt = (gemContext?`Context (CFA study material):\n${gemContext}\n\n`:"") +
+    `Question: ${q||"Explain this concept simply and give a practical, on-the-job example."}\n\n`+
+    `You are a concise CFA tutor helping a charterholder refresh their knowledge. Answer in plain English — tight, practical, and skimmable. Use short paragraphs and define any jargon you introduce.`;
+  ansEl.innerHTML = `<span class="gem-spin"></span> <span class="cb" style="color:var(--td)">Thinking…</span>`;
+  const btn=document.getElementById("gem-send"); btn.disabled=true;
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`,{
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({contents:[{parts:[{text:prompt}]}]})
+    });
+    if(!res.ok){
+      let msg = `Request failed (${res.status}).`;
+      try { const j=await res.json(); if(j.error&&j.error.message) msg=j.error.message; } catch(_){}
+      ansEl.innerHTML = `<div class="cb" style="color:var(--red)">${gemFormat(msg)}</div>`;
+      return;
+    }
+    const data = await res.json();
+    const text = (data&&data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts)
+      ? data.candidates[0].content.parts.map(p=>p.text||"").join("") : "(No answer returned.)";
+    ansEl.innerHTML = gemFormat(text);
+  } catch(e){
+    ansEl.innerHTML = `<div class="cb" style="color:var(--red)">Couldn't reach Gemini. Check your connection${IS_PREVIEW?" (network is blocked in preview mode)":""}.</div>`;
+  } finally { btn.disabled=false; }
+}
+
+// Minimal safe formatting: escape HTML, then honour **bold** and line breaks
+function gemFormat(t){
+  const esc=(t||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  return esc.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\n/g,"<br>");
+}
+
+document.getElementById("gem-close").addEventListener("click",closeGemini);
+document.getElementById("gem-overlay").addEventListener("click",e=>{ if(e.target.id==="gem-overlay") closeGemini(); });
+document.getElementById("gem-send").addEventListener("click",sendGemini);
+document.getElementById("gem-input").addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendGemini(); }
 });
 
 async function init(){

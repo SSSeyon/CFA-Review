@@ -1,4 +1,4 @@
-const CACHE = "cfa-review-v2";
+const CACHE = "cfa-review-v3";
 const OFFLINE_ASSETS = [
   "./",
   "./index.html"
@@ -18,6 +18,31 @@ self.addEventListener("activate", e => {
     )
   );
   self.clients.claim();
+});
+
+// Daily reminder via Periodic Background Sync (supported browsers / installed PWA)
+self.addEventListener("periodicsync", e => {
+  if(e.tag === "cfa-daily"){
+    e.waitUntil(
+      self.registration.showNotification("CFA Review", {
+        body: "Keep your streak alive — a 2-minute refresher is waiting.",
+        icon: "icon-192.png",
+        badge: "icon-192.png",
+        tag: "cfa-daily"
+      })
+    );
+  }
+});
+
+// Focus (or open) the app when a notification is tapped
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({type:"window", includeUncontrolled:true}).then(list => {
+      for(const c of list){ if("focus" in c) return c.focus(); }
+      if(self.clients.openWindow) return self.clients.openWindow("./");
+    })
+  );
 });
 
 self.addEventListener("fetch", e => {

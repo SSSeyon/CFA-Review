@@ -1,4 +1,4 @@
-const CACHE = "cfa-review-v1";
+const CACHE = "cfa-review-v2";
 const OFFLINE_ASSETS = [
   "./",
   "./index.html"

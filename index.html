@@ -243,6 +243,17 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
 .tts-btn svg{width:13px;height:13px;flex-shrink:0}
 .tts-pip{width:5px;height:5px;border-radius:50%;background:var(--tf);transition:background .2s;flex-shrink:0}
 .tts-pip.tts-active{background:var(--gold)}
+/* Daily ritual */
+.rit-row{display:flex;gap:6px}
+.rit-pill{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:var(--rs);border:1px solid var(--border);background:var(--s2);font-size:10px;color:var(--td);transition:all var(--t);text-align:center;line-height:1.3}
+.rit-pill .rit-ic{font-size:13px;line-height:1}
+.rit-pill.done{background:rgba(62,207,142,.1);border-color:rgba(62,207,142,.25);color:var(--green)}
+.qa-row{display:flex;gap:7px;margin-bottom:9px}
+/* Formula sheet */
+.fx-row{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;margin-bottom:7px}
+.fx-name{font-size:12.5px;font-weight:600;color:var(--text)}
+.fx-row .formula{margin:7px 0 0;text-align:left}
+.fx-use{font-size:11px;color:var(--td);line-height:1.5;margin-top:6px}
 #toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--s2);border:1px solid var(--border2);border-radius:var(--rs);padding:7px 14px;font-size:12px;color:var(--text);opacity:0;transition:all .2s ease;pointer-events:none;z-index:200;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.5)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
@@ -252,7 +263,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
   <div class="hdr">
     <div>
       <div class="logo">CFA Review</div>
-      <div class="logo-sub">Charter Revision · v<span id="app-ver">2.0.0</span></div>
+      <div class="logo-sub">Charterholder · v<span id="app-ver">2.0.0</span></div>
     </div>
     <div class="hdr-r">
       <button class="theme-toggle" id="theme-toggle-header" title="Toggle theme" aria-label="Toggle dark/light mode">
@@ -340,6 +351,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
 
     <!-- NOTES -->
     <div class="view" id="view-notes">
+      <div class="ltabs" id="notes-mode-tabs">
+        <div class="lt active" data-nm="notes">📖 Study Notes</div>
+        <div class="lt" data-nm="formulas">∑ Formula Sheet</div>
+      </div>
       <div id="notes-subject-sec">
         <div class="ltabs" id="nltabs">
           <div class="lt active" data-nlv="L1">Level I</div>
@@ -355,6 +370,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
       </div>
       <div id="notes-detail-sec" style="display:none">
         <div id="notes-detail-out"></div>
+      </div>
+      <div id="formulas-sec" style="display:none">
+        <div class="search-wrap">
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-inp" id="fx-search" type="text" placeholder="Search formulas…" autocomplete="off"/>
+        </div>
+        <div id="fx-out"></div>
       </div>
     </div>
 
@@ -512,7 +534,7 @@ import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/fir
 // ─────────────────────────────────────────────
 // APP VERSION & FIREBASE
 // ─────────────────────────────────────────────
-const APP_VERSION = "1.1.2";
+const APP_VERSION = "1.2.0";
 document.getElementById("app-ver").textContent = APP_VERSION;
 
 const fbApp = initializeApp({
@@ -566,6 +588,72 @@ const SUBJECTS = {
     "Private Wealth"
   ]
 };
+
+// ─────────────────────────────────────────────
+// FORMULA SHEET — curated quick-reference bank
+// s: subject, n: name, f: formula, u: when/why to use
+// ─────────────────────────────────────────────
+const FX_ORDER = ["Quantitative Methods","Economics","Financial Statement Analysis","Corporate Finance","Equity Investments","Fixed Income","Derivatives & Risk Management","Alternative Investments","Portfolio Construction","Portfolio Management","Asset Allocation","Performance Measurement","Private Markets","Private Wealth"];
+const FORMULA_BANK = [
+  // Quantitative Methods
+  {s:"Quantitative Methods",n:"Time Value of Money",f:"PV = FV / (1 + r)ⁿ",u:"All valuation reduces to discounting future cash flows back to today."},
+  {s:"Quantitative Methods",n:"Effective Annual Rate",f:"EAR = (1 + r/m)ᵐ − 1",u:"Compare rates quoted with different compounding frequencies."},
+  {s:"Quantitative Methods",n:"Standard Error of the Mean",f:"SE = σ / √n",u:"Precision of a sample mean — shrinks with larger samples."},
+  {s:"Quantitative Methods",n:"Test Statistic (t)",f:"t = (x̄ − μ₀) / (s / √n)",u:"Hypothesis testing on a mean; compare to critical t-value."},
+  {s:"Quantitative Methods",n:"Sample Variance",f:"s² = Σ(xᵢ − x̄)² / (n − 1)",u:"Divide by n−1 for an unbiased estimate from a sample."},
+  {s:"Quantitative Methods",n:"Correlation Coefficient",f:"ρ = Cov(X,Y) / (σx × σy)",u:"Standardises covariance to a −1…+1 scale."},
+  {s:"Quantitative Methods",n:"Continuously Compounded Return",f:"r = ln(P₁ / P₀)",u:"Time-additive returns; used in option pricing models."},
+  // Economics
+  {s:"Economics",n:"Fisher Relation",f:"(1 + i) = (1 + r)(1 + πᵉ)  ≈  i = r + πᵉ",u:"Nominal rate = real rate + expected inflation."},
+  {s:"Economics",n:"GDP — Expenditure Approach",f:"GDP = C + I + G + (X − M)",u:"Consumption + Investment + Government + Net Exports."},
+  {s:"Economics",n:"Quantity Theory of Money",f:"M × V = P × Y",u:"Money supply growth beyond real output growth drives inflation."},
+  {s:"Economics",n:"Covered Interest Rate Parity",f:"F/S = (1 + i_dom) / (1 + i_for)",u:"Forward FX rates are set by interest differentials — no arbitrage."},
+  {s:"Economics",n:"Relative Purchasing Power Parity",f:"%ΔS ≈ π_dom − π_for",u:"Higher-inflation currencies depreciate over the long run."},
+  // FSA
+  {s:"Financial Statement Analysis",n:"DuPont — 3 Factor",f:"ROE = (NI/Rev) × (Rev/Assets) × (Assets/Equity)",u:"Margin × turnover × leverage — find the true driver of ROE."},
+  {s:"Financial Statement Analysis",n:"DuPont — 5 Factor",f:"ROE = (NI/EBT) × (EBT/EBIT) × (EBIT/Rev) × (Rev/Assets) × (Assets/Equity)",u:"Adds tax burden and interest burden for full decomposition."},
+  {s:"Financial Statement Analysis",n:"Cash Conversion Cycle",f:"CCC = DSO + DIO − DPO",u:"Days to convert investment into cash; negative CCC is a funding advantage."},
+  {s:"Financial Statement Analysis",n:"Free Cash Flow to the Firm",f:"FCFF = NI + NCC + Int×(1−t) − CapEx − ΔNWC",u:"Cash available to all capital providers; discount at WACC."},
+  {s:"Financial Statement Analysis",n:"Free Cash Flow to Equity",f:"FCFE = FCFF − Int×(1−t) + Net Borrowing",u:"Cash available to shareholders; discount at cost of equity."},
+  {s:"Financial Statement Analysis",n:"Basic EPS",f:"EPS = (NI − Preferred Div) / Wtd Avg Shares",u:"Earnings attributable to each common share."},
+  {s:"Financial Statement Analysis",n:"Interest Coverage",f:"Coverage = EBIT / Interest Expense",u:"Ability to service debt from operating earnings."},
+  // Corporate Finance
+  {s:"Corporate Finance",n:"WACC",f:"WACC = (E/V)×Ke + (D/V)×Kd×(1−t)",u:"The hurdle rate — returns above it create value."},
+  {s:"Corporate Finance",n:"Cost of Equity (CAPM)",f:"Ke = Rf + β × (Rm − Rf)",u:"Required return for bearing systematic equity risk."},
+  {s:"Corporate Finance",n:"MM Proposition I (with taxes)",f:"V_L = V_U + t × D",u:"Leverage adds value via the tax shield — the theory behind LBOs."},
+  {s:"Corporate Finance",n:"Degree of Total Leverage",f:"DTL = DOL × DFL",u:"Combined sensitivity of EPS to a change in sales."},
+  {s:"Corporate Finance",n:"Sustainable Growth Rate",f:"g = b × ROE",u:"Growth fundable without external equity (b = retention ratio)."},
+  // Equity
+  {s:"Equity Investments",n:"Gordon Growth Model",f:"P₀ = D₁ / (r − g)",u:"Value of a stable dividend-payer; requires g < r."},
+  {s:"Equity Investments",n:"Justified P/E",f:"P/E = Payout Ratio / (r − g)",u:"What the fundamentals say the multiple should be."},
+  {s:"Equity Investments",n:"Justified P/B",f:"P/B = (ROE − g) / (r − g)",u:"P/B > 1 only when ROE beats the cost of equity."},
+  {s:"Equity Investments",n:"Residual Income",f:"RI = Net Income − (Ke × Book Value of Equity)",u:"Value created after charging for equity capital."},
+  {s:"Equity Investments",n:"Enterprise Value",f:"EV = Market Cap + Net Debt (+ Pref + Minority)",u:"Capital-structure-neutral firm value; pair with EBITDA."},
+  // Fixed Income
+  {s:"Fixed Income",n:"Bond Price Sensitivity",f:"ΔP/P ≈ −Duration × Δy",u:"Add ½ × Convexity × Δy² for large yield moves."},
+  {s:"Fixed Income",n:"Modified Duration",f:"ModDur = MacDur / (1 + y/m)",u:"Converts Macaulay duration into price sensitivity."},
+  {s:"Fixed Income",n:"Implied Forward Rate",f:"(1 + z₂)² = (1 + z₁)(1 + f₁,₁)",u:"Forward rates are embedded in today's spot curve."},
+  {s:"Fixed Income",n:"Option-Adjusted Spread",f:"OAS = Z-spread − Option Cost",u:"The right spread for comparing bonds with embedded options."},
+  {s:"Fixed Income",n:"Current Yield",f:"Current Yield = Annual Coupon / Price",u:"Income return only — ignores capital gain/loss to maturity."},
+  // Derivatives
+  {s:"Derivatives & Risk Management",n:"Put–Call Parity",f:"C + PV(X) = P + S₀",u:"Any of the four components can be replicated with the other three."},
+  {s:"Derivatives & Risk Management",n:"Forward Price (no income)",f:"F₀ = S₀ × (1 + r)ᵀ",u:"Subtract PV of dividends/coupons from S₀ if the asset pays income."},
+  {s:"Derivatives & Risk Management",n:"Adjusting Beta with Futures",f:"Number of contracts = (Target Beta − Current Beta) × Portfolio Value / (Futures Price × Multiplier)",u:"Change equity exposure without trading the underlying portfolio."},
+  // Alternatives
+  {s:"Alternative Investments",n:"Direct Capitalisation (Real Estate)",f:"Value = NOI / Cap Rate",u:"Lower cap rate = higher value; rising rates hurt property values."},
+  {s:"Alternative Investments",n:"Commodity Total Return",f:"Total Return = Spot Change + Roll Yield + Collateral Yield",u:"Roll yield is positive in backwardation, negative in contango."},
+  {s:"Alternative Investments",n:"PE Fund Multiples",f:"TVPI = DPI + RVPI = (Distributions + NAV) / Paid-in Capital",u:"Realised (DPI) plus unrealised (RVPI) value per unit invested."},
+  // Portfolio
+  {s:"Portfolio Construction",n:"CAPM Expected Return",f:"E(Rᵢ) = Rf + βᵢ × (E(Rm) − Rf)",u:"Only systematic risk is rewarded."},
+  {s:"Portfolio Construction",n:"Sharpe Ratio",f:"Sharpe = (Rp − Rf) / σp",u:"Excess return per unit of total risk."},
+  {s:"Portfolio Construction",n:"Treynor Ratio",f:"Treynor = (Rp − Rf) / βp",u:"Use when the portfolio is a sleeve of a diversified whole."},
+  {s:"Portfolio Construction",n:"Jensen's Alpha",f:"α = Rp − [Rf + β × (Rm − Rf)]",u:"Return above what CAPM predicts for the risk taken."},
+  {s:"Portfolio Construction",n:"Information Ratio",f:"IR = Active Return / Tracking Error",u:"Consistency of outperformance versus the benchmark."},
+  {s:"Portfolio Construction",n:"Two-Asset Portfolio Variance",f:"σp² = w₁²σ₁² + w₂²σ₂² + 2w₁w₂ρσ₁σ₂",u:"Diversification benefit comes from ρ < 1."},
+  {s:"Portfolio Construction",n:"Beta",f:"β = Cov(Rᵢ, Rm) / σ²m",u:"Sensitivity to market moves; levered beta includes financial risk."},
+  {s:"Portfolio Construction",n:"Roy's Safety-First Ratio",f:"SFRatio = (E(Rp) − R_L) / σp",u:"Pick the portfolio least likely to breach the minimum return R_L."},
+  {s:"Portfolio Management",n:"Fundamental Law of Active Management",f:"IR = IC × √Breadth",u:"Modest skill across many independent bets beats concentrated skill."}
+];
 
 // ─────────────────────────────────────────────
 // BASE CONTENT BANK
@@ -1056,6 +1144,7 @@ CONTENT.studyNotes = {}; // { L1: { "Subject": noteObj }, L2: {...}, L3: {...} }
 let flLevel="L1", qLevel="L1";
 let flTopics=new Set(), qTopics=new Set();
 let flCards=[], flIdx=0;
+let flMode="topics", flSessionLabel="";
 let qQs=[], qIdx=0, qScore=0;
 let dbLevel="L1";
 
@@ -1223,7 +1312,16 @@ function loadToday(){
   const tOpts=tIndices.map(i=>rQ.opts[i]);
   const tAns=tIndices.indexOf(rQ.ans);
 
+  const dueN = getSrsDueCards().length;
+
   document.getElementById("today-out").innerHTML = `
+    <div class="card" style="padding:12px 15px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="lbl" style="margin:0">Daily Refresher</div>
+        <span class="tag gold" id="ritual-status">0/3</span>
+      </div>
+      <div class="rit-row" id="ritual-row"></div>
+    </div>
     <div class="hero">
       <div class="hero-date">${dateStr}</div>
       <div class="hero-kick">Today's Concept</div>
@@ -1247,7 +1345,21 @@ function loadToday(){
       </div>
       <div class="qexp" id="today-exp">${rQ.exp}</div>
     </div>
+    <div class="lbl">Keep It Going</div>
+    <div class="qa-row">
+      <button class="btn btn-p" style="flex:1.4" id="qa-review">${dueN>0?`⚡ Review ${dueN} due card${dueN>1?"s":""}`:"🎲 Daily mix · 10 cards"}</button>
+      <button class="btn btn-g" style="flex:1" id="qa-fx">∑ Formulas</button>
+    </div>
   `;
+
+  markRitual("concept");
+  renderRitual();
+
+  document.getElementById("qa-review").addEventListener("click",startSmartReview);
+  document.getElementById("qa-fx").addEventListener("click",()=>{
+    switchTab("notes");
+    showNotesMode("formulas");
+  });
 
   document.querySelectorAll("#today-opts .qopt").forEach(opt=>{
     opt.addEventListener("click",()=>{
@@ -1259,8 +1371,80 @@ function loadToday(){
       });
       document.getElementById("today-exp").classList.add("show");
       logActivity("concept",c.concept,c.level);
+      markStudyToday();
+      markRitual("practice");
     });
   });
+}
+
+// ─────────────────────────────────────────────
+// DAILY RITUAL — lightweight daily checklist
+// ─────────────────────────────────────────────
+function getRitual(){
+  const today = new Date().toISOString().split("T")[0];
+  if(!state.dailyRitual || state.dailyRitual.date !== today){
+    state.dailyRitual = {date:today, concept:false, practice:false, review:false};
+  }
+  return state.dailyRitual;
+}
+
+function markRitual(key){
+  const r = getRitual();
+  if(r[key]) return;
+  r[key] = true;
+  saveState();
+  renderRitual();
+  if(r.concept && r.practice && r.review) toast("🏆 Daily refresher complete");
+}
+
+function renderRitual(){
+  const row = document.getElementById("ritual-row");
+  if(!row) return;
+  const r = getRitual();
+  const items = [["concept","📖","Read concept"],["practice","🎯","Quick question"],["review","🃏","Review session"]];
+  row.innerHTML = items.map(([k,ic,lb])=>
+    `<div class="rit-pill${r[k]?" done":""}"><span class="rit-ic">${r[k]?"✓":ic}</span>${lb}</div>`
+  ).join("");
+  const st = document.getElementById("ritual-status");
+  const n = items.filter(([k])=>r[k]).length;
+  if(st) st.textContent = n===3 ? "Done 🏆" : `${n}/3`;
+}
+
+// ─────────────────────────────────────────────
+// SMART REVIEW — one-tap mixed sessions
+// ─────────────────────────────────────────────
+function getAllFlashcards(){
+  const all=[];
+  ["L1","L2","L3"].forEach(lv=>Object.values(CONTENT.flashcards[lv]||{}).forEach(arr=>all.push(...arr)));
+  return all;
+}
+
+function getSrsDueCards(){
+  const today = Math.floor(Date.now()/86400000);
+  return getAllFlashcards().filter(c=>{
+    const s=(state.srsData||{})[c.id];
+    return s && s.due <= today;
+  });
+}
+
+function shuffleArr(a){
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+
+function startMixedSession(cards,label){
+  if(!cards.length){ toast("No cards available"); return; }
+  flCards=cards; flIdx=0; flMode="smart"; flSessionLabel=label;
+  switchTab("flash");
+  document.getElementById("fl-topic-sec").style.display="none";
+  document.getElementById("fl-card-sec").style.display="block";
+  renderFlCard();
+}
+
+function startSmartReview(){
+  const due=getSrsDueCards();
+  if(due.length) startMixedSession(shuffleArr(due).slice(0,20),"Due Review");
+  else startMixedSession(shuffleArr(getAllFlashcards()).slice(0,10),"Daily Mix");
 }
 
 // ─────────────────────────────────────────────
@@ -1331,6 +1515,7 @@ function startFlash(){
   });
   flCards = all;
   flIdx=0;
+  flMode="topics"; flSessionLabel="";
   document.getElementById("fl-topic-sec").style.display="none";
   document.getElementById("fl-card-sec").style.display="block";
   renderFlCard();
@@ -1426,26 +1611,29 @@ function renderFlCard(){
       state.cardsReviewed=(state.cardsReviewed||0)+1;
       if(flIdx<flCards.length-1){ flIdx++; renderFlCard(); }
       else {
-        const dueCount = [...flTopics].reduce((s,t)=>s+getDueCards(flLevel,t).length,0);
-        const flTopicLabel=[...flTopics].join(", ");
+        const smart = flMode==="smart";
+        const dueCount = smart ? getSrsDueCards().length : [...flTopics].reduce((s,t)=>s+getDueCards(flLevel,t).length,0);
+        const flTopicLabel = smart ? flSessionLabel : [...flTopics].join(", ");
         document.getElementById("fl-card-out").innerHTML=`
           <div class="card" style="text-align:center;padding:26px 16px">
             <div style="font-size:28px;margin-bottom:9px">🎯</div>
-            <div class="ct" style="margin-bottom:5px">Deck Complete!</div>
-            <div class="cb">You reviewed ${flCards.length} cards on ${flTopicLabel}.</div>
+            <div class="ct" style="margin-bottom:5px">${smart?flSessionLabel+" Complete!":"Deck Complete!"}</div>
+            <div class="cb">You reviewed ${flCards.length} card${flCards.length>1?"s":""}${smart?"":" on "+flTopicLabel}.</div>
             ${dueCount>0?`<div class="cb" style="margin-top:6px;color:var(--amber)">⚡ ${dueCount} card${dueCount>1?"s":""} due for review</div>`:""}
             <div style="margin-top:13px;display:flex;gap:6px">
               <button class="btn btn-g" style="flex:1" id="fl-again">Again</button>
-              <button class="btn btn-p" style="flex:1" id="fl-newtopic">New Subject</button>
+              <button class="btn btn-p" style="flex:1" id="fl-newtopic">${smart?"Done":"New Subject"}</button>
             </div>
           </div>`;
-        logActivity("flash",[...flTopics].join(", "),flLevel);
+        logActivity("flash",flTopicLabel,smart?"Mixed":flLevel);
         markStudyToday();
+        markRitual("review");
         saveState();
-        document.getElementById("fl-again").addEventListener("click",startFlash);
+        document.getElementById("fl-again").addEventListener("click",smart?startSmartReview:startFlash);
         document.getElementById("fl-newtopic").addEventListener("click",()=>{
           document.getElementById("fl-card-sec").style.display="none";
           document.getElementById("fl-topic-sec").style.display="block";
+          if(smart) switchTab("today");
         });
       }
     });
@@ -1572,6 +1760,7 @@ function renderResult(){
   state.topicsProgress[key].total+=total;
   logActivity("quiz",[...qTopics].join(", "),qLevel,`${qScore}/${total}`);
   markStudyToday();
+  markRitual("review");
   saveState();
   const emoji=pct>=70?"🟢":pct>=50?"🟡":"🔴";
   const msg=pct>=70?"Strong — build on this.":pct>=50?"Decent. Review the explanations.":"Revisit this topic — it'll click.";
@@ -2176,6 +2365,50 @@ document.querySelectorAll("#nltabs .lt").forEach(tab=>{
     buildNotesGrid();
   });
 });
+
+// ─────────────────────────────────────────────
+// FORMULA SHEET
+// ─────────────────────────────────────────────
+function showNotesMode(m){
+  document.querySelectorAll("#notes-mode-tabs .lt").forEach(t=>t.classList.toggle("active",t.dataset.nm===m));
+  const isFx = m==="formulas";
+  document.getElementById("notes-subject-sec").style.display = isFx?"none":"block";
+  document.getElementById("notes-detail-sec").style.display = "none";
+  document.getElementById("formulas-sec").style.display = isFx?"block":"none";
+  if(isFx) renderFormulas(document.getElementById("fx-search").value.trim());
+}
+document.querySelectorAll("#notes-mode-tabs .lt").forEach(tab=>{
+  tab.addEventListener("click",()=>showNotesMode(tab.dataset.nm));
+});
+document.getElementById("fx-search").addEventListener("input",e=>renderFormulas(e.target.value.trim()));
+
+function renderFormulas(query){
+  const q=(query||"").toLowerCase();
+  // Merge imported daily-concept formulas not already covered by the curated bank
+  const seen = new Set(FORMULA_BANK.map(f=>f.f.replace(/\s/g,"")));
+  const extra = (CONTENT.dailyConcepts||[])
+    .filter(c=>c.formula && !seen.has(c.formula.replace(/\s/g,"")))
+    .map(c=>({s:c.subject, n:c.concept, f:c.formula, u:c.keyTakeaway}));
+  const all = [...FORMULA_BANK, ...extra].filter(f=>
+    !q || f.n.toLowerCase().includes(q) || f.f.toLowerCase().includes(q) ||
+    (f.u||"").toLowerCase().includes(q) || f.s.toLowerCase().includes(q)
+  );
+  const out=document.getElementById("fx-out");
+  if(!all.length){
+    out.innerHTML=`<div class="cb" style="color:var(--tf);text-align:center;padding:20px 0">No formulas match "${query}"</div>`;
+    return;
+  }
+  const order=[...new Set([...FX_ORDER, ...all.map(f=>f.s)])];
+  out.innerHTML = order.filter(s=>all.some(f=>f.s===s)).map(s=>
+    `<div class="lbl">${s}</div>`+
+    all.filter(f=>f.s===s).map(f=>
+      `<div class="fx-row">
+        <div class="fx-name">${f.n}</div>
+        <div class="formula">${f.f}</div>
+        ${f.u?`<div class="fx-use">${f.u}</div>`:""}
+      </div>`).join("")
+  ).join("");
+}
 
 // ─────────────────────────────────────────────
 // DARK MODE TOGGLE

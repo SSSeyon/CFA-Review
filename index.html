@@ -283,6 +283,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
 .gem-ctx{font-size:11px;color:var(--tf);line-height:1.5;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:9px 11px;margin-bottom:11px}
 .gem-ans{font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap}
 .gem-ans .cb{color:var(--td)}
+.gem-meta{display:flex;align-items:center;gap:7px;margin-top:12px;padding-top:11px;border-top:1px dashed var(--border)}
+.gem-saved{font-size:11px;color:var(--green,#2e9e6b);font-weight:600}
+.gem-mini{background:var(--s2);border:1px solid var(--border2);color:var(--td);border-radius:var(--rs);padding:5px 10px;font-size:11px;font-family:'Outfit',sans-serif;cursor:pointer;font-weight:600}
+.gem-mini:active{transform:scale(.96)}
+.gem-mini.gem-del{color:var(--red)}
 .gem-foot{padding:11px 16px 16px;border-top:1px solid var(--border);display:flex;gap:7px;align-items:flex-end}
 .gem-input{flex:1;background:var(--s2);border:1px solid var(--border2);border-radius:var(--rs);padding:10px 12px;font-size:13px;font-family:'Outfit',sans-serif;color:var(--text);outline:none;resize:none;max-height:110px;line-height:1.5}
 .gem-input:focus{border-color:var(--purple)}
@@ -546,6 +551,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
           </div>
           <button class="btn btn-sm" id="reset-progress-btn" style="background:rgba(239,108,108,.12);color:var(--red);border:1px solid rgba(239,108,108,.25);flex-shrink:0">Reset</button>
         </div>
+        <div class="setting-row" style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
+          <div>
+            <div class="setting-title">Hard Refresh</div>
+            <div class="setting-sub">Clears the app cache and reloads the latest version</div>
+          </div>
+          <button class="btn btn-sm" id="hard-refresh-btn" style="flex-shrink:0">↻ Refresh</button>
+        </div>
       </div>
 
       <div class="lbl">Version History</div>
@@ -601,6 +613,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit
     <div class="gem-body">
       <div class="gem-ctx" id="gem-ctx"></div>
       <div class="gem-ans" id="gem-ans"><div class="cb" style="color:var(--tf)">Ask a follow-up about this concept, or tap send to get a plain-English explanation.</div></div>
+      <div class="gem-meta" id="gem-meta" style="display:none">
+        <span class="gem-saved" id="gem-saved">✓ Saved · synced across devices</span>
+        <span style="flex:1"></span>
+        <button class="gem-mini" id="gem-regen" title="Generate a fresh answer">↻ Regenerate</button>
+        <button class="gem-mini gem-del" id="gem-del" title="Delete saved answer">🗑 Delete</button>
+      </div>
     </div>
     <div class="gem-foot">
       <textarea class="gem-input" id="gem-input" rows="1" placeholder="Ask about this…"></textarea>
@@ -618,7 +636,7 @@ import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/fir
 // ─────────────────────────────────────────────
 // APP VERSION & FIREBASE
 // ─────────────────────────────────────────────
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.4.1";
 document.getElementById("app-ver").textContent = APP_VERSION;
 
 // Gemini "spark" mark — four-point concave star with the Gemini gradient
@@ -1287,7 +1305,8 @@ let state = {
   cardsReviewed:0, topicsProgress:{},
   activityLog:[], conceptIdx:0, conceptDate:null,
   versionLog:[], srsData:{}, bookmarks:[],
-  subjectSeen:{}, lastFreezeDate:null
+  subjectSeen:{}, lastFreezeDate:null,
+  gemCache:{}
 };
 
 // Runtime content store — base + imports merged
@@ -1566,7 +1585,7 @@ function loadToday(){
     showNotesMode("formulas");
   });
   document.getElementById("gem-today").addEventListener("click",()=>{
-    askGemini(`Concept: ${c.concept} (${c.subject}, ${c.level}).\n${c.explanation}\nKey takeaway: ${c.keyTakeaway}`, `Explain "${c.concept}" simply, then give one practical example of how it's used on the job.`);
+    askGemini(`Concept: ${c.concept} (${c.subject}, ${c.level}).\n${c.explanation}\nKey takeaway: ${c.keyTakeaway}`, `Explain "${c.concept}" simply, then give one practical example of how it's used on the job.`, "concept:"+c.id);
   });
   const applyReveal = document.getElementById("apply-reveal");
   if(applyReveal) applyReveal.addEventListener("click",()=>{
@@ -1796,7 +1815,7 @@ function renderFlCard(){
     <div style="text-align:center;margin-bottom:11px"><button class="ai-btn" id="gem-fl"><span class="gem-ic">${GEMINI_SVG}</span>Ask Gemini about this</button></div>
   `;
   document.getElementById("gem-fl").addEventListener("click",()=>{
-    askGemini(`Flashcard (${card._subj||""}${card._lv?", Level "+LV_LABEL[card._lv]:""}).\nFront: ${card.front}\nBack: ${card.back}`, `Explain this flashcard in plain English and give a quick example.`);
+    askGemini(`Flashcard (${card._subj||""}${card._lv?", Level "+LV_LABEL[card._lv]:""}).\nFront: ${card.front}\nBack: ${card.back}`, `Explain this flashcard in plain English and give a quick example.`, "card:"+card.id);
   });
   document.getElementById("bm-fl").addEventListener("click",(e)=>{
     e.stopPropagation();
@@ -2734,6 +2753,23 @@ document.getElementById("reset-progress-btn").addEventListener("click",()=>{
   toast("Progress reset");
 });
 
+// Hard refresh — wipe the service-worker cache and reload the latest deployed version
+document.getElementById("hard-refresh-btn").addEventListener("click",async()=>{
+  const btn=document.getElementById("hard-refresh-btn");
+  btn.disabled=true; btn.textContent="Refreshing…";
+  try {
+    if("caches" in window){
+      const keys=await caches.keys();
+      await Promise.all(keys.map(k=>caches.delete(k)));
+    }
+    if("serviceWorker" in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.update().catch(()=>{})));
+    }
+  } catch(e){ /* best effort — reload anyway */ }
+  location.reload();
+});
+
 // ─────────────────────────────────────────────
 // SETTINGS — GEMINI KEY
 // ─────────────────────────────────────────────
@@ -2828,18 +2864,41 @@ if(reminderState.on) scheduleReminder();
 // ASK GEMINI — key stored locally (never committed to the repo)
 // ─────────────────────────────────────────────
 document.getElementById("gem-logo").innerHTML = GEMINI_SVG;
-let gemContext = "";
+let gemContext = "";     // study material for the current card
+let gemKey = "";         // cache key for the current card (e.g. "card:123") — "" disables caching
 function getGeminiKey(){ return (localStorage.getItem("cfa_gemini_key")||"").trim(); }
 
-function askGemini(context, presetQuestion){
+function gemShowMeta(show){ document.getElementById("gem-meta").style.display = show?"flex":"none"; }
+
+// Render a stored answer without spending a token
+function gemRenderCached(entry){
+  document.getElementById("gem-ans").innerHTML = gemFormat(entry.text);
+  if(entry.q) document.getElementById("gem-input").value = entry.q;
+  const saved = document.getElementById("gem-saved");
+  saved.textContent = "✓ Saved" + (entry.ts?" · "+new Date(entry.ts).toLocaleDateString():"") + " · synced across devices";
+  gemShowMeta(true);
+}
+
+function askGemini(context, presetQuestion, cacheKey){
   gemContext = context||"";
+  gemKey = cacheKey||"";
   document.getElementById("gem-ctx").textContent = context||"";
   document.getElementById("gem-input").value = presetQuestion||"";
-  document.getElementById("gem-ans").innerHTML = `<div class="cb" style="color:var(--tf)">Tap Send for a plain-English explanation, or edit the question first.</div>`;
+  const cached = gemKey && state.gemCache && state.gemCache[gemKey];
+  if(cached){
+    gemRenderCached(cached);
+  } else {
+    document.getElementById("gem-ans").innerHTML = `<div class="cb" style="color:var(--tf)">Tap Send for a plain-English explanation, or edit the question first.</div>`;
+    gemShowMeta(false);
+  }
   document.getElementById("gem-overlay").classList.add("show");
   setTimeout(()=>document.getElementById("gem-input").focus(),80);
 }
 function closeGemini(){ document.getElementById("gem-overlay").classList.remove("show"); }
+
+// Fallback chain — each model has its own free-tier quota bucket, so when one
+// is rate-limited (429) or overloaded (503) the next tier can still answer.
+const GEMINI_MODELS = ["gemini-2.5-flash","gemini-2.5-flash-lite","gemini-2.0-flash","gemini-2.0-flash-lite"];
 
 async function sendGemini(){
   const key = getGeminiKey();
@@ -2853,25 +2912,55 @@ async function sendGemini(){
     `Question: ${q||"Explain this concept simply and give a practical, on-the-job example."}\n\n`+
     `You are a concise CFA tutor helping a charterholder refresh their knowledge. Answer in plain English — tight, practical, and skimmable. Use short paragraphs and define any jargon you introduce.`;
   ansEl.innerHTML = `<span class="gem-spin"></span> <span class="cb" style="color:var(--td)">Thinking…</span>`;
+  gemShowMeta(false);
   const btn=document.getElementById("gem-send"); btn.disabled=true;
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`,{
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({contents:[{parts:[{text:prompt}]}]})
-    });
-    if(!res.ok){
-      let msg = `Request failed (${res.status}).`;
-      try { const j=await res.json(); if(j.error&&j.error.message) msg=j.error.message; } catch(_){}
-      ansEl.innerHTML = `<div class="cb" style="color:var(--red)">${gemFormat(msg)}</div>`;
+    let lastErr = "";
+    for(let i=0;i<GEMINI_MODELS.length;i++){
+      const model = GEMINI_MODELS[i];
+      if(i>0) ansEl.innerHTML = `<span class="gem-spin"></span> <span class="cb" style="color:var(--td)">Busy — trying ${model}…</span>`;
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({contents:[{parts:[{text:prompt}]}]})
+      });
+      if(!res.ok){
+        let msg = `Request failed (${res.status}).`;
+        try { const j=await res.json(); if(j.error&&j.error.message) msg=j.error.message; } catch(_){}
+        // Rate limit / overloaded / model unavailable → try the next tier
+        if(res.status===429 || res.status===503 || res.status===404){ lastErr = msg; continue; }
+        ansEl.innerHTML = `<div class="cb" style="color:var(--red)">${gemFormat(msg)}</div>`;
+        return;
+      }
+      const data = await res.json();
+      const text = (data&&data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts)
+        ? data.candidates[0].content.parts.map(p=>p.text||"").join("") : "(No answer returned.)";
+      ansEl.innerHTML = gemFormat(text) +
+        (i>0 ? `<div class="cb" style="color:var(--tf);font-size:10.5px;margin-top:9px">Answered by ${model} (primary model was rate-limited)</div>` : "");
+      // Cache the answer so it syncs to other devices and never costs a token again
+      if(gemKey){
+        if(!state.gemCache) state.gemCache = {};
+        state.gemCache[gemKey] = { q, text, ts: Date.now(), model };
+        saveState();
+        document.getElementById("gem-saved").textContent = "✓ Saved · synced across devices";
+        gemShowMeta(true);
+      }
       return;
     }
-    const data = await res.json();
-    const text = (data&&data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts)
-      ? data.candidates[0].content.parts.map(p=>p.text||"").join("") : "(No answer returned.)";
-    ansEl.innerHTML = gemFormat(text);
+    // Every tier was rate-limited or unavailable
+    ansEl.innerHTML = `<div class="cb" style="color:var(--red)">All Gemini models are rate-limited right now. Free-tier daily quotas reset at midnight Pacific.${lastErr?`<br><span style="color:var(--tf);font-size:10.5px">${gemFormat(lastErr)}</span>`:""}</div>`;
   } catch(e){
     ansEl.innerHTML = `<div class="cb" style="color:var(--red)">Couldn't reach Gemini. Check your connection${IS_PREVIEW?" (network is blocked in preview mode)":""}.</div>`;
   } finally { btn.disabled=false; }
+}
+
+function deleteGemCache(){
+  if(gemKey && state.gemCache && state.gemCache[gemKey]){
+    delete state.gemCache[gemKey];
+    saveState();
+  }
+  document.getElementById("gem-ans").innerHTML = `<div class="cb" style="color:var(--tf)">Saved answer deleted. Tap Send to generate a fresh one.</div>`;
+  gemShowMeta(false);
+  toast("🗑 Saved answer deleted");
 }
 
 // Minimal safe formatting: escape HTML, then honour **bold** and line breaks
@@ -2883,6 +2972,8 @@ function gemFormat(t){
 document.getElementById("gem-close").addEventListener("click",closeGemini);
 document.getElementById("gem-overlay").addEventListener("click",e=>{ if(e.target.id==="gem-overlay") closeGemini(); });
 document.getElementById("gem-send").addEventListener("click",sendGemini);
+document.getElementById("gem-regen").addEventListener("click",sendGemini);
+document.getElementById("gem-del").addEventListener("click",deleteGemCache);
 document.getElementById("gem-input").addEventListener("keydown",e=>{
   if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendGemini(); }
 });
